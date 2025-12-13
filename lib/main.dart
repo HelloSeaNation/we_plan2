@@ -128,6 +128,8 @@ class Event {
   final String? deviceName;
   final Color? color;
   final bool isFirstLoad;
+  final TimeOfDay? startTime;
+  final TimeOfDay? endTime;
 
   Event({
     required this.id,
@@ -137,7 +139,24 @@ class Event {
     this.deviceName,
     this.color,
     this.isFirstLoad = false,
+    this.startTime,
+    this.endTime,
   });
+
+  // Format time for display
+  String get timeString {
+    if (startTime == null) return '';
+    final start = _formatTime(startTime!);
+    if (endTime == null) return start;
+    return '$start - ${_formatTime(endTime!)}';
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
 
   @override
   String toString() => title;
@@ -747,6 +766,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _showAddEventDialog() {
     final formKey = GlobalKey<FormState>();
+    TimeOfDay? startTime;
+    TimeOfDay? endTime;
 
     // Calculate responsive dialog width based on screen size
     final dialogWidth = Responsive.getResponsiveValue(
@@ -755,124 +776,260 @@ class _MyHomePageState extends State<MyHomePage> {
       tablet: Responsive.width(context) * 0.7,
       desktop: Responsive.width(context) * 0.4,
     );
+    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
 
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => Center(
-        child: Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          // Set the width constraint for larger screens
-          child: Container(
-            width: dialogWidth,
-            constraints: BoxConstraints(maxWidth: 600),
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Dialog title
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.event_available, color: _themeColor),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Add Event',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Dialog content
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Center(
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            // Set the width constraint for larger screens
+            child: Container(
+              width: dialogWidth,
+              constraints: BoxConstraints(maxWidth: 600),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Dialog title
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
                         children: [
+                          Icon(Icons.event_available, color: _themeColor, size: isLargeScreen ? 28 : 24),
+                          const SizedBox(width: 8),
                           Text(
-                            DateFormat('EEEE, MMMM d, yyyy')
-                                .format(_selectedDay!),
+                            'Add Event',
                             style: TextStyle(
-                                color: Colors.grey[600], fontSize: 14),
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _titleController,
-                            decoration: InputDecoration(
-                              labelText: 'Event title',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey[50],
+                              fontWeight: FontWeight.w600,
+                              fontSize: isLargeScreen ? 20 : 16,
                             ),
-                            validator: (value) => value == null || value.isEmpty
-                                ? 'Please enter an event title'
-                                : null,
-                            autofocus: true,
-                            textCapitalization: TextCapitalization.sentences,
                           ),
                         ],
                       ),
                     ),
-                  ),
 
-                  // Dialog actions
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                          label: const Text('Cancel'),
-                          style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey[700]),
+                    // Dialog content
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Form(
+                        key: formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              DateFormat('EEEE, MMMM d, yyyy')
+                                  .format(_selectedDay!),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: isLargeScreen ? 16 : 14,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _titleController,
+                              style: TextStyle(fontSize: isLargeScreen ? 18 : 16),
+                              decoration: InputDecoration(
+                                labelText: 'Event title',
+                                labelStyle: TextStyle(fontSize: isLargeScreen ? 16 : 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[50],
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: isLargeScreen ? 16 : 12,
+                                ),
+                              ),
+                              validator: (value) => value == null || value.isEmpty
+                                  ? 'Please enter an event title'
+                                  : null,
+                              autofocus: true,
+                              textCapitalization: TextCapitalization.sentences,
+                            ),
+                            const SizedBox(height: 16),
+                            // Time selection row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTimeSelector(
+                                    context: context,
+                                    label: 'Start Time',
+                                    time: startTime,
+                                    isLargeScreen: isLargeScreen,
+                                    onTap: () async {
+                                      final picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: startTime ?? TimeOfDay.now(),
+                                      );
+                                      if (picked != null) {
+                                        setDialogState(() => startTime = picked);
+                                      }
+                                    },
+                                    onClear: () => setDialogState(() => startTime = null),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildTimeSelector(
+                                    context: context,
+                                    label: 'End Time',
+                                    time: endTime,
+                                    isLargeScreen: isLargeScreen,
+                                    onTap: () async {
+                                      final picked = await showTimePicker(
+                                        context: context,
+                                        initialTime: endTime ?? startTime ?? TimeOfDay.now(),
+                                      );
+                                      if (picked != null) {
+                                        setDialogState(() => endTime = picked);
+                                      }
+                                    },
+                                    onClear: () => setDialogState(() => endTime = null),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            if (formKey.currentState!.validate()) {
-                              if (_selectedDay != null) {
-                                final newEvent = Event(
-                                  title: _titleController.text,
-                                  description: _descController.text,
-                                  id: '',
-                                );
-                                _addEventToFirestore(newEvent);
-                                _titleController.clear();
-                                _descController.clear();
-                                Navigator.pop(context);
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.done),
-                          label: const Text('Save'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _themeColor,
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+
+                    // Dialog actions
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => Navigator.pop(context),
+                            icon: Icon(Icons.close, size: isLargeScreen ? 22 : 18),
+                            label: Text('Cancel', style: TextStyle(fontSize: isLargeScreen ? 16 : 14)),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[700],
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isLargeScreen ? 20 : 16,
+                                vertical: isLargeScreen ? 12 : 8,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              if (formKey.currentState!.validate()) {
+                                if (_selectedDay != null) {
+                                  final newEvent = Event(
+                                    title: _titleController.text,
+                                    description: _descController.text,
+                                    id: '',
+                                    startTime: startTime,
+                                    endTime: endTime,
+                                  );
+                                  _addEventToFirestore(newEvent);
+                                  _titleController.clear();
+                                  _descController.clear();
+                                  Navigator.pop(context);
+                                }
+                              }
+                            },
+                            icon: Icon(Icons.done, size: isLargeScreen ? 22 : 18),
+                            label: Text('Save', style: TextStyle(fontSize: isLargeScreen ? 16 : 14)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _themeColor,
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isLargeScreen ? 24 : 16,
+                                vertical: isLargeScreen ? 12 : 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper widget for time selection
+  Widget _buildTimeSelector({
+    required BuildContext context,
+    required String label,
+    required TimeOfDay? time,
+    required bool isLargeScreen,
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    final hasTime = time != null;
+    final displayText = hasTime
+        ? '${time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod}:${time.minute.toString().padLeft(2, '0')} ${time.period == DayPeriod.am ? 'AM' : 'PM'}'
+        : 'Optional';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: isLargeScreen ? 14 : 12,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey[50],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.access_time,
+              size: isLargeScreen ? 22 : 18,
+              color: hasTime ? _themeColor : Colors.grey[400],
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 12 : 10,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Text(
+                    displayText,
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 16 : 14,
+                      color: hasTime ? Colors.black87 : Colors.grey[400],
+                      fontWeight: hasTime ? FontWeight.w500 : FontWeight.normal,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+            if (hasTime)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close, size: 18, color: Colors.grey[400]),
+              ),
+          ],
         ),
       ),
     );
@@ -897,6 +1054,10 @@ class _MyHomePageState extends State<MyHomePage> {
       fingerprint: fingerprint,
       deviceName: deviceName,
       colorValue: colorValue,
+      startTimeHour: event.startTime?.hour,
+      startTimeMinute: event.startTime?.minute,
+      endTimeHour: event.endTime?.hour,
+      endTimeMinute: event.endTime?.minute,
     );
 
     if (_isOnline) {
@@ -908,6 +1069,10 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: fingerprint,
           deviceName: deviceName,
           colorValue: colorValue,
+          startTimeHour: event.startTime?.hour,
+          startTimeMinute: event.startTime?.minute,
+          endTimeHour: event.endTime?.hour,
+          endTimeMinute: event.endTime?.minute,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Event added successfully!")),
@@ -987,6 +1152,12 @@ class _MyHomePageState extends State<MyHomePage> {
               fingerprint: e.fingerprint,
               deviceName: e.deviceName,
               color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
+              startTime: e.startTimeHour != null && e.startTimeMinute != null
+                  ? TimeOfDay(hour: e.startTimeHour!, minute: e.startTimeMinute!)
+                  : null,
+              endTime: e.endTimeHour != null && e.endTimeMinute != null
+                  ? TimeOfDay(hour: e.endTimeHour!, minute: e.endTimeMinute!)
+                  : null,
             ),
           )
           .toList();
@@ -1027,6 +1198,12 @@ class _MyHomePageState extends State<MyHomePage> {
           color: data['color_value'] != null
               ? Color(data['color_value'])
               : Colors.blue,
+          startTime: data['start_time_hour'] != null && data['start_time_minute'] != null
+              ? TimeOfDay(hour: data['start_time_hour'], minute: data['start_time_minute'])
+              : null,
+          endTime: data['end_time_hour'] != null && data['end_time_minute'] != null
+              ? TimeOfDay(hour: data['end_time_hour'], minute: data['end_time_minute'])
+              : null,
         );
         events.add(event);
 
@@ -1038,6 +1215,10 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: data['fingerprint'],
           deviceName: data['device_name'],
           colorValue: data['color_value'],
+          startTimeHour: data['start_time_hour'],
+          startTimeMinute: data['start_time_minute'],
+          endTimeHour: data['end_time_hour'],
+          endTimeMinute: data['end_time_minute'],
         );
         await eventsBox.put(data['id'], cached);
       }
@@ -2014,112 +2195,169 @@ class _MyHomePageState extends State<MyHomePage> {
                     final eventColor =
                         event.color ?? Theme.of(context).primaryColor;
 
-                    return Card(
-                      margin: EdgeInsets.symmetric(
-                        horizontal: isLargeScreen ? 12 : 16,
-                        vertical: isLargeScreen ? 8 : 6,
-                      ),
-                      elevation: isLargeScreen ? 2 : 1,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: eventColor.withOpacity(0.3),
-                          width: 1,
+                    return Dismissible(
+                      key: Key(event.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isLargeScreen ? 12 : 16,
+                          vertical: isLargeScreen ? 8 : 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red[400],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 24),
+                        child: Icon(
+                          Icons.delete_outline,
+                          color: Colors.white,
+                          size: isLargeScreen ? 32 : 28,
                         ),
                       ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => _showEventDetails(event),
-                        onLongPress: () => _showEditEventDialog(event),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                eventColor.withOpacity(0.2),
-                                Colors.white,
-                              ],
-                              stops: const [0.02, 0.1],
-                            ),
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Delete Event'),
+                            content: Text('Are you sure you want to delete "${event.title}"?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                child: Text('Delete', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
                           ),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: cardPadding,
-                              horizontal: cardPadding + 4,
+                        );
+                      },
+                      onDismissed: (direction) {
+                        _deleteEventFromFirestore(event, index);
+                      },
+                      child: Card(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isLargeScreen ? 12 : 16,
+                          vertical: isLargeScreen ? 8 : 6,
+                        ),
+                        elevation: isLargeScreen ? 2 : 1,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: eventColor.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => _showEventDetails(event),
+                          onLongPress: () => _showEditEventDialog(event),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  eventColor.withOpacity(0.2),
+                                  Colors.white,
+                                ],
+                                stops: const [0.02, 0.1],
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                // Left colored indicator
-                                Container(
-                                  width: isLargeScreen ? 5 : 4,
-                                  height: isLargeScreen ? 60 : 50,
-                                  decoration: BoxDecoration(
-                                    color: eventColor,
-                                    borderRadius: BorderRadius.circular(3),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: cardPadding,
+                                horizontal: cardPadding + 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  // Left colored indicator
+                                  Container(
+                                    width: isLargeScreen ? 5 : 4,
+                                    height: isLargeScreen ? 70 : 55,
+                                    decoration: BoxDecoration(
+                                      color: eventColor,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
                                   ),
-                                ),
-                                SizedBox(width: isLargeScreen ? 20 : 16),
-                                // Content
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        event.title,
-                                        style: TextStyle(
-                                          fontSize: eventTitleFontSize,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      if (eventData.fingerprint != null)
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.person_outline,
-                                              size: deviceFontSize + 2,
-                                              color: Colors.grey[600],
+                                  SizedBox(width: isLargeScreen ? 20 : 16),
+                                  // Content
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Time display
+                                        if (event.timeString.isNotEmpty)
+                                          Padding(
+                                            padding: EdgeInsets.only(bottom: 4),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.access_time,
+                                                  size: isLargeScreen ? 16 : 14,
+                                                  color: _themeColor,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  event.timeString,
+                                                  style: TextStyle(
+                                                    fontSize: isLargeScreen ? 14 : 12,
+                                                    color: _themeColor,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              event.deviceName ??
-                                                  "Device ${event.fingerprint!.substring(0, 6)}",
-                                              style: TextStyle(
-                                                fontSize: deviceFontSize,
+                                          ),
+                                        Text(
+                                          event.title,
+                                          style: TextStyle(
+                                            fontSize: eventTitleFontSize,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        if (eventData.fingerprint != null)
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.person_outline,
+                                                size: deviceFontSize + 2,
                                                 color: Colors.grey[600],
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                                // Actions
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        size: isLargeScreen ? 24 : 20,
-                                      ),
-                                      tooltip: 'Delete',
-                                      onPressed: () =>
-                                          _deleteEventFromFirestore(
-                                        event,
-                                        index,
-                                      ),
-                                      splashRadius: isLargeScreen ? 28 : 24,
-                                      color: Colors.red[400],
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  event.deviceName ??
+                                                      "Device ${event.fingerprint!.substring(0, 6)}",
+                                                  style: TextStyle(
+                                                    fontSize: deviceFontSize,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                  // Swipe hint icon
+                                  Icon(
+                                    Icons.chevron_left,
+                                    color: Colors.grey[300],
+                                    size: isLargeScreen ? 24 : 20,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

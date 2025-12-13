@@ -54,6 +54,10 @@ class FirestoreService {
     String? fingerprint,
     String? deviceName,
     int? colorValue,
+    int? startTimeHour,
+    int? startTimeMinute,
+    int? endTimeHour,
+    int? endTimeMinute,
   }) async {
     try {
       final fingerprint = await DeviceFingerprint.generate();
@@ -71,6 +75,10 @@ class FirestoreService {
         'device_name': deviceName,
         'color_value': colorValue,
         'platform': Platform.instance.operatingSystem,
+        'start_time_hour': startTimeHour,
+        'start_time_minute': startTimeMinute,
+        'end_time_hour': endTimeHour,
+        'end_time_minute': endTimeMinute,
       });
 
       // Update widget after adding an event
@@ -86,7 +94,11 @@ class FirestoreService {
         'fingerprint':
             'permission-denied-${DateTime.now().millisecondsSinceEpoch}',
         'platform': Platform.instance.operatingSystem,
-        'device_name': fallbackName, // Add this
+        'device_name': fallbackName,
+        'start_time_hour': startTimeHour,
+        'start_time_minute': startTimeMinute,
+        'end_time_hour': endTimeHour,
+        'end_time_minute': endTimeMinute,
       });
 
       // Update widget even in fallback case
