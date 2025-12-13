@@ -1,11 +1,12 @@
-import 'dart:io' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import "firestore_service.dart";
 import 'package:quickalert/quickalert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
 // Mobile scanner only available on mobile platforms
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart'
+    if (dart.library.html) 'package:we_plan2/platform/mobile_scanner_stub.dart';
 
 class ShareSetupScreen extends StatefulWidget {
   final bool isFirstTime;
@@ -48,10 +49,9 @@ class _ShareSetupScreenState extends State<ShareSetupScreen> {
 
   // Check if QR scanning is supported (mobile platforms only)
   bool get _isQRScanSupported {
-    if (io.Platform.isAndroid || io.Platform.isIOS) {
-      return true;
-    }
-    return false;
+    // Web doesn't support QR scanning
+    if (kIsWeb) return false;
+    return true;
   }
 
   Future<void> _scanQRCode() async {
