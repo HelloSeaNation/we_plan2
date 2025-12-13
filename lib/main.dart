@@ -1463,26 +1463,62 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  // Helper method for app bar buttons with better touch targets
+  Widget _buildAppBarButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required double iconSize,
+    required double fontSize,
+  }) {
+    return TextButton.icon(
+      icon: Icon(icon, color: _themeColor, size: iconSize),
+      label: Text(label, style: TextStyle(fontSize: fontSize)),
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.black87,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final iconSize = isLargeScreen ? 24.0 : 20.0;
+    final buttonFontSize = isLargeScreen ? 16.0 : 14.0;
+
     return Scaffold(
       appBar: AppBar(
-        title: Responsive.isDesktop(context)
+        toolbarHeight: isLargeScreen ? 64 : 56,
+        title: isLargeScreen
             ? Row(
                 children: [
-                  // Desktop menu options on the left side with short labels
-                  TextButton.icon(
-                    icon: Icon(Icons.settings_outlined,
-                        color: _themeColor, size: 20),
-                    label: const Text('Settings'),
-                    onPressed: () => _navigateToSettings(),
-                    style:
-                        TextButton.styleFrom(foregroundColor: Colors.black87),
+                  // App title/logo for tablet
+                  Text(
+                    'WePlan',
+                    style: TextStyle(
+                      fontSize: isLargeScreen ? 24 : 20,
+                      fontWeight: FontWeight.bold,
+                      color: _themeColor,
+                    ),
                   ),
-                  TextButton.icon(
-                    icon: Icon(Icons.share_outlined,
-                        color: _themeColor, size: 20),
-                    label: const Text('Share'),
+                  const SizedBox(width: 32),
+                  // Menu options with larger touch targets
+                  _buildAppBarButton(
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    onPressed: () => _navigateToSettings(),
+                    iconSize: iconSize,
+                    fontSize: buttonFontSize,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildAppBarButton(
+                    icon: Icons.share_outlined,
+                    label: 'Share',
                     onPressed: () async {
                       final prefs = await SharedPreferences.getInstance();
                       final shareCode = prefs.getString('shareCode');
@@ -1506,13 +1542,13 @@ class _MyHomePageState extends State<MyHomePage> {
                         );
                       }
                     },
-                    style:
-                        TextButton.styleFrom(foregroundColor: Colors.black87),
+                    iconSize: iconSize,
+                    fontSize: buttonFontSize,
                   ),
-                  TextButton.icon(
-                    icon: Icon(Icons.group_add_outlined,
-                        color: _themeColor, size: 20),
-                    label: const Text('Join'),
+                  const SizedBox(width: 8),
+                  _buildAppBarButton(
+                    icon: Icons.group_add_outlined,
+                    label: 'Join',
                     onPressed: () {
                       Navigator.push(
                         context,
@@ -1522,13 +1558,13 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       );
                     },
-                    style:
-                        TextButton.styleFrom(foregroundColor: Colors.black87),
+                    iconSize: iconSize,
+                    fontSize: buttonFontSize,
                   ),
                 ],
               )
             : Text(widget.title),
-        leading: Responsive.isDesktop(context)
+        leading: isLargeScreen
             ? null
             : PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz),
@@ -1614,18 +1650,38 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
         actions: [
-          // Remove desktop menu options from actions
-          Icon(
-            _isOnline ? Icons.wifi : Icons.wifi_off,
-            color: _isOnline ? Colors.transparent : Colors.red,
-            size: 24,
+          // Connection status indicator
+          if (!_isOnline)
+            Padding(
+              padding: EdgeInsets.only(right: isLargeScreen ? 16 : 8),
+              child: Icon(
+                Icons.wifi_off,
+                color: Colors.red,
+                size: isLargeScreen ? 28 : 24,
+              ),
+            ),
+          // Add event button - larger for tablet
+          Padding(
+            padding: EdgeInsets.only(right: isLargeScreen ? 16 : 8),
+            child: isLargeScreen
+                ? ElevatedButton.icon(
+                    icon: Icon(Icons.add, size: 22),
+                    label: Text('Add Event', style: TextStyle(fontSize: 16)),
+                    onPressed: _selectedDay != null ? _showAddEventDialog : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _themeColor,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: _selectedDay != null ? _showAddEventDialog : null,
+                  ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: _selectedDay != null ? _showAddEventDialog : null,
-          ),
-          const SizedBox(width: 8),
         ],
       ),
       body: CenteredContainer(
@@ -1731,6 +1787,12 @@ class _MyHomePageState extends State<MyHomePage> {
             selectedDecoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _themeColor,
+            ),
+            // Today highlight - more visible
+            todayDecoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _themeColor.withOpacity(0.3),
+              border: Border.all(color: _themeColor, width: 2),
             ),
             //The highlight box decoration using Cell Margin to adjust the position and size
             cellPadding: EdgeInsets.zero,
