@@ -1,12 +1,12 @@
 {
-    "name": "we_plan2",
-    "short_name": "we_plan2",
+    "name": "WePlan",
+    "short_name": "WePlan",
     "start_url": ".",
-    "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "weplan version 2",
-    "orientation": "portrait-primary",
+    "display": "fullscreen",
+    "background_color": "#F5F7FA",
+    "theme_color": "#ffffff",
+    "description": "Shared Calendar App",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
