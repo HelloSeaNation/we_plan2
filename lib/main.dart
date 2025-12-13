@@ -1707,10 +1707,10 @@ class _MyHomePageState extends State<MyHomePage> {
     final calculatedRowHeight = isLargeScreen ? (availableHeight / 6.5) : 65.0; // 6 rows + header
     final rowHeight = calculatedRowHeight.clamp(80.0, 120.0); // Min 80, max 120
 
-    final fontSize = isLargeScreen ? 18.0 : 14.0;
-    final eventFontSize = isLargeScreen ? 12.0 : 9.0;
-    final headerFontSize = isLargeScreen ? 22.0 : 16.0;
-    final daysOfWeekHeight = isLargeScreen ? 45.0 : 32.0;
+    final fontSize = isLargeScreen ? 22.0 : 14.0;
+    final eventFontSize = isLargeScreen ? 16.0 : 9.0;
+    final headerFontSize = isLargeScreen ? 26.0 : 16.0;
+    final daysOfWeekHeight = isLargeScreen ? 50.0 : 32.0;
     final cellBottomMargin = isLargeScreen ? (rowHeight - 30) : 41.0;
     final eventAreaTop = isLargeScreen ? 32.0 : 25.0;
     final eventAreaHeight = isLargeScreen ? (rowHeight - 38) : 32.0;
@@ -1775,12 +1775,12 @@ class _MyHomePageState extends State<MyHomePage> {
           daysOfWeekHeight: daysOfWeekHeight,
           daysOfWeekStyle: DaysOfWeekStyle(
             weekdayStyle: TextStyle(
-              fontSize: isLargeScreen ? 14.0 : 12.0,
+              fontSize: isLargeScreen ? 18.0 : 12.0,
               fontWeight: FontWeight.w600,
               color: Colors.grey[700],
             ),
             weekendStyle: TextStyle(
-              fontSize: isLargeScreen ? 14.0 : 12.0,
+              fontSize: isLargeScreen ? 18.0 : 12.0,
               fontWeight: FontWeight.w600,
               color: Colors.grey[500],
             ),
@@ -1793,9 +1793,9 @@ class _MyHomePageState extends State<MyHomePage> {
               fontSize: headerFontSize,
               fontWeight: FontWeight.bold,
             ),
-            leftChevronIcon: Icon(Icons.chevron_left, size: isLargeScreen ? 28 : 24),
-            rightChevronIcon: Icon(Icons.chevron_right, size: isLargeScreen ? 28 : 24),
-            headerPadding: EdgeInsets.symmetric(vertical: isLargeScreen ? 12 : 8),
+            leftChevronIcon: Icon(Icons.chevron_left, size: isLargeScreen ? 32 : 24),
+            rightChevronIcon: Icon(Icons.chevron_right, size: isLargeScreen ? 32 : 24),
+            headerPadding: EdgeInsets.symmetric(vertical: isLargeScreen ? 16 : 8),
           ),
 
           // Custom builder to show event titles
@@ -1817,20 +1817,21 @@ class _MyHomePageState extends State<MyHomePage> {
                     itemBuilder: (context, index) {
                       final event = eventsList[index];
                       return Container(
-                        margin: EdgeInsets.only(bottom: 1),
+                        margin: EdgeInsets.only(bottom: isLargeScreen ? 2 : 1),
                         padding: EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 1,
+                          horizontal: isLargeScreen ? 6 : 3,
+                          vertical: isLargeScreen ? 3 : 1,
                         ),
                         decoration: BoxDecoration(
-                          color: event.color?.withOpacity(0.7) ??
-                              Colors.blue.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(4),
+                          color: event.color?.withOpacity(0.75) ??
+                              Colors.blue.withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(isLargeScreen ? 6 : 4),
                         ),
                         child: Text(
                           event.title,
                           style: TextStyle(
                             fontSize: eventFontSize,
+                            fontWeight: isLargeScreen ? FontWeight.w500 : FontWeight.normal,
                             color: Colors.black87,
                           ),
                           overflow: TextOverflow.ellipsis,
