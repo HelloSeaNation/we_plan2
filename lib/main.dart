@@ -1650,40 +1650,35 @@ class _MyHomePageState extends State<MyHomePage> {
             : null,
         child: OrientationBuilder(
           builder: (context, orientation) {
-            // For desktop and landscape tablets, show a side-by-side layout
-            if (Responsive.isDesktop(context) ||
-                (Responsive.isTablet(context) &&
-                    Responsive.isLandscape(context))) {
+            final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+            final isLandscape = Responsive.isLandscape(context);
+
+            // For tablet and desktop, always show side-by-side layout
+            if (isLargeScreen) {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Calendar section (takes 60% on desktop, 50% on tablet)
-                  Container(
-                    width: Responsive.isDesktop(context)
-                        ? (Responsive.width(context) > 1200
-                            ? 720
-                            : Responsive.width(context) * 0.6)
-                        : (Responsive.width(context) > 1200
-                            ? 600
-                            : Responsive.width(context) * 0.5),
+                  // Calendar section - flexible width based on screen
+                  Expanded(
+                    flex: isLandscape ? 3 : 5,
                     child: _buildCalendarSection(),
                   ),
 
                   // Vertical divider
-                  VerticalDivider(
+                  Container(
                     width: 1,
-                    thickness: 1,
                     color: Colors.grey[300],
                   ),
 
                   // Events list section
                   Expanded(
+                    flex: isLandscape ? 2 : 3,
                     child: _buildEventsSection(),
                   ),
                 ],
               );
             }
-            // For portrait orientation, use the original stacked layout
+            // For mobile, use stacked layout
             else {
               return Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1704,6 +1699,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Helper method to build the calendar section
   Widget _buildCalendarSection() {
+    // Responsive values for tablet/desktop
+    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final rowHeight = isLargeScreen ? 85.0 : 65.0;
+    final fontSize = isLargeScreen ? 16.0 : 14.0;
+    final eventFontSize = isLargeScreen ? 11.0 : 9.0;
+    final headerFontSize = isLargeScreen ? 20.0 : 16.0;
+    final daysOfWeekHeight = isLargeScreen ? 40.0 : 32.0;
+    final cellBottomMargin = isLargeScreen ? 55.0 : 41.0;
+    final eventAreaTop = isLargeScreen ? 28.0 : 25.0;
+    final eventAreaHeight = isLargeScreen ? 48.0 : 32.0;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1722,17 +1728,12 @@ class _MyHomePageState extends State<MyHomePage> {
               color: _themeColor,
             ),
             //The highlight box decoration using Cell Margin to adjust the position and size
-            cellPadding: EdgeInsets.only(
-              left: 0,
-              top: 0,
-              right: 0,
-              bottom: 0,
-            ),
+            cellPadding: EdgeInsets.zero,
             cellMargin: EdgeInsets.only(
               left: 8,
               top: 2,
               right: 8,
-              bottom: 41,
+              bottom: cellBottomMargin,
             ),
             // Cell styling
             cellAlignment: Alignment.topCenter,
@@ -1749,27 +1750,47 @@ class _MyHomePageState extends State<MyHomePage> {
             //Text styling
             defaultTextStyle: TextStyle(
               color: Color(0xFF5A5A5A),
-              fontSize: 14,
+              fontSize: fontSize,
             ),
             selectedTextStyle: TextStyle(
               color: Color(0xFFFFFFFF),
-              fontSize: 14,
+              fontSize: fontSize,
             ),
-            todayTextStyle: TextStyle(color: Color(0xFF170909), fontSize: 13),
+            todayTextStyle: TextStyle(
+              color: Color(0xFF170909),
+              fontSize: fontSize,
+              fontWeight: FontWeight.bold,
+            ),
             outsideTextStyle: TextStyle(
               color: Color(0x8CA384BA),
-              fontSize: 13,
+              fontSize: fontSize - 1,
             ),
           ),
           // Calendar configuration
-          daysOfWeekHeight: 32,
-          rowHeight: 65,
+          daysOfWeekHeight: daysOfWeekHeight,
+          daysOfWeekStyle: DaysOfWeekStyle(
+            weekdayStyle: TextStyle(
+              fontSize: isLargeScreen ? 14.0 : 12.0,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+            weekendStyle: TextStyle(
+              fontSize: isLargeScreen ? 14.0 : 12.0,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
+            ),
+          ),
+          rowHeight: rowHeight,
           headerStyle: HeaderStyle(
             formatButtonVisible: false,
             titleCentered: true,
-            leftChevronIcon: Icon(Icons.chevron_left),
-            rightChevronIcon: Icon(Icons.chevron_right),
-            headerPadding: EdgeInsets.symmetric(vertical: 8),
+            titleTextStyle: TextStyle(
+              fontSize: headerFontSize,
+              fontWeight: FontWeight.bold,
+            ),
+            leftChevronIcon: Icon(Icons.chevron_left, size: isLargeScreen ? 28 : 24),
+            rightChevronIcon: Icon(Icons.chevron_right, size: isLargeScreen ? 28 : 24),
+            headerPadding: EdgeInsets.symmetric(vertical: isLargeScreen ? 12 : 8),
           ),
 
           // Custom builder to show event titles
@@ -1782,21 +1803,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 bottom: 1,
                 left: 1,
                 right: 1,
-                top: 25,
+                top: eventAreaTop,
                 child: Container(
-                  height: 32, // Taller to fit more text
+                  height: eventAreaHeight,
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
-                    itemCount: eventsList.length > 3
-                        ? 3
-                        : eventsList.length, // Limit to 2 events
+                    itemCount: eventsList.length > 3 ? 3 : eventsList.length,
                     itemBuilder: (context, index) {
                       final event = eventsList[index];
                       return Container(
-                        margin: EdgeInsets.only(bottom: 0.5),
+                        margin: EdgeInsets.only(bottom: 1),
                         padding: EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 0.5,
+                          horizontal: 3,
+                          vertical: 1,
                         ),
                         decoration: BoxDecoration(
                           color: event.color?.withOpacity(0.7) ??
@@ -1805,7 +1824,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         child: Text(
                           event.title,
-                          style: TextStyle(fontSize: 9, color: Colors.black),
+                          style: TextStyle(
+                            fontSize: eventFontSize,
+                            color: Colors.black87,
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -1832,20 +1854,31 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Helper method to build the events section
   Widget _buildEventsSection() {
+    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final titleFontSize = isLargeScreen ? 22.0 : 18.0;
+    final eventTitleFontSize = isLargeScreen ? 18.0 : 16.0;
+    final deviceFontSize = isLargeScreen ? 14.0 : 12.0;
+    final emptyIconSize = isLargeScreen ? 90.0 : 70.0;
+    final emptyTextSize = isLargeScreen ? 18.0 : 16.0;
+    final cardPadding = isLargeScreen ? 16.0 : 12.0;
+
     if (_selectedDay == null) {
       return Center(
         child: Text('Select a day to view events',
-            style: TextStyle(color: Colors.grey[600])),
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: isLargeScreen ? 18 : 14,
+            )),
       );
     }
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: EdgeInsets.all(isLargeScreen ? 16.0 : 8.0),
           child: Text(
             DateFormat('EEEE, d MMM').format(_selectedDay!),
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(
@@ -1857,30 +1890,33 @@ class _MyHomePageState extends State<MyHomePage> {
                     children: [
                       Icon(
                         Icons.event_available,
-                        size: 70,
+                        size: emptyIconSize,
                         color: Colors.grey[300],
                       ),
                       const SizedBox(height: 16),
                       Text(
                         "No event for this day",
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: emptyTextSize,
                           color: Colors.grey[600],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                       ElevatedButton.icon(
                         onPressed: _showAddEventDialog,
-                        icon: const Icon(Icons.add),
-                        label: const Text("Add Event"),
+                        icon: Icon(Icons.add, size: isLargeScreen ? 24 : 20),
+                        label: Text(
+                          "Add Event",
+                          style: TextStyle(fontSize: isLargeScreen ? 16 : 14),
+                        ),
                         style: ElevatedButton.styleFrom(
                           iconColor: Colors.white,
                           foregroundColor: Colors.white,
                           backgroundColor: _themeColor.withOpacity(0.8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isLargeScreen ? 32 : 24,
+                            vertical: isLargeScreen ? 16 : 12,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1892,7 +1928,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 )
               : ListView.builder(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(top: 8, bottom: 16),
+                  padding: EdgeInsets.only(
+                    top: isLargeScreen ? 12 : 8,
+                    bottom: isLargeScreen ? 24 : 16,
+                    left: isLargeScreen ? 8 : 0,
+                    right: isLargeScreen ? 8 : 0,
+                  ),
                   itemCount: _getEventsForDay(_selectedDay!).length,
                   itemBuilder: (context, index) {
                     final event = _getEventsForDay(_selectedDay!)[index];
@@ -1901,11 +1942,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         event.color ?? Theme.of(context).primaryColor;
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
+                      margin: EdgeInsets.symmetric(
+                        horizontal: isLargeScreen ? 12 : 16,
+                        vertical: isLargeScreen ? 8 : 6,
                       ),
-                      elevation: 1,
+                      elevation: isLargeScreen ? 2 : 1,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                         side: BorderSide(
@@ -1931,15 +1972,22 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
+                            padding: EdgeInsets.symmetric(
+                              vertical: cardPadding,
+                              horizontal: cardPadding + 4,
                             ),
                             child: Row(
                               children: [
                                 // Left colored indicator
-                                Container(width: 4, height: 50),
-                                const SizedBox(width: 25),
+                                Container(
+                                  width: isLargeScreen ? 5 : 4,
+                                  height: isLargeScreen ? 60 : 50,
+                                  decoration: BoxDecoration(
+                                    color: eventColor,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                                SizedBox(width: isLargeScreen ? 20 : 16),
                                 // Content
                                 Expanded(
                                   child: Column(
@@ -1949,20 +1997,20 @@ class _MyHomePageState extends State<MyHomePage> {
                                       Text(
                                         event.title,
                                         style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: eventTitleFontSize,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.black87,
                                         ),
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 6),
                                       if (eventData.fingerprint != null)
                                         Row(
                                           children: [
                                             Icon(
                                               Icons.person_outline,
-                                              size: 14,
+                                              size: deviceFontSize + 2,
                                               color: Colors.grey[600],
                                             ),
                                             const SizedBox(width: 4),
@@ -1970,7 +2018,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                               event.deviceName ??
                                                   "Device ${event.fingerprint!.substring(0, 6)}",
                                               style: TextStyle(
-                                                fontSize: 12,
+                                                fontSize: deviceFontSize,
                                                 color: Colors.grey[600],
                                               ),
                                             ),
@@ -1983,9 +2031,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.delete_outline,
-                                        size: 20,
+                                        size: isLargeScreen ? 24 : 20,
                                       ),
                                       tooltip: 'Delete',
                                       onPressed: () =>
@@ -1993,7 +2041,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         event,
                                         index,
                                       ),
-                                      splashRadius: 24,
+                                      splashRadius: isLargeScreen ? 28 : 24,
                                       color: Colors.red[400],
                                     ),
                                   ],
