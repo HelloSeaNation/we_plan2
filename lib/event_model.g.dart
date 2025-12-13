@@ -24,13 +24,17 @@ class CachedEventAdapter extends TypeAdapter<CachedEvent> {
       fingerprint: fields[4] as String?,
       deviceName: fields[5] as String?,
       colorValue: fields[6] as int?,
+      startTimeHour: fields[7] as int?,
+      startTimeMinute: fields[8] as int?,
+      endTimeHour: fields[9] as int?,
+      endTimeMinute: fields[10] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CachedEvent obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +48,15 @@ class CachedEventAdapter extends TypeAdapter<CachedEvent> {
       ..writeByte(5)
       ..write(obj.deviceName)
       ..writeByte(6)
-      ..write(obj.colorValue);
+      ..write(obj.colorValue)
+      ..writeByte(7)
+      ..write(obj.startTimeHour)
+      ..writeByte(8)
+      ..write(obj.startTimeMinute)
+      ..writeByte(9)
+      ..write(obj.endTimeHour)
+      ..writeByte(10)
+      ..write(obj.endTimeMinute);
   }
 
   @override

@@ -25,6 +25,18 @@ class CachedEvent extends HiveObject {
   @HiveField(6)
   int? colorValue;
 
+  @HiveField(7)
+  int? startTimeHour;
+
+  @HiveField(8)
+  int? startTimeMinute;
+
+  @HiveField(9)
+  int? endTimeHour;
+
+  @HiveField(10)
+  int? endTimeMinute;
+
   CachedEvent({
     required this.id,
     required this.title,
@@ -33,5 +45,9 @@ class CachedEvent extends HiveObject {
     this.fingerprint,
     this.deviceName,
     this.colorValue,
+    this.startTimeHour,
+    this.startTimeMinute,
+    this.endTimeHour,
+    this.endTimeMinute,
   });
 }
