@@ -1651,16 +1651,15 @@ class _MyHomePageState extends State<MyHomePage> {
         child: OrientationBuilder(
           builder: (context, orientation) {
             final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
-            final isLandscape = Responsive.isLandscape(context);
 
-            // For tablet and desktop, always show side-by-side layout
+            // For tablet and desktop, calendar takes most of the space
             if (isLargeScreen) {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Calendar section - flexible width based on screen
+                  // Calendar section - takes 75% of screen
                   Expanded(
-                    flex: isLandscape ? 3 : 5,
+                    flex: 3,
                     child: _buildCalendarSection(),
                   ),
 
@@ -1670,9 +1669,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Colors.grey[300],
                   ),
 
-                  // Events list section
+                  // Events list section - compact 25% sidebar
                   Expanded(
-                    flex: isLandscape ? 2 : 3,
+                    flex: 1,
                     child: _buildEventsSection(),
                   ),
                 ],
@@ -1701,14 +1700,20 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildCalendarSection() {
     // Responsive values for tablet/desktop
     final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
-    final rowHeight = isLargeScreen ? 85.0 : 65.0;
-    final fontSize = isLargeScreen ? 16.0 : 14.0;
-    final eventFontSize = isLargeScreen ? 11.0 : 9.0;
-    final headerFontSize = isLargeScreen ? 20.0 : 16.0;
-    final daysOfWeekHeight = isLargeScreen ? 40.0 : 32.0;
-    final cellBottomMargin = isLargeScreen ? 55.0 : 41.0;
-    final eventAreaTop = isLargeScreen ? 28.0 : 25.0;
-    final eventAreaHeight = isLargeScreen ? 48.0 : 32.0;
+
+    // Calculate row height based on available screen height for tablet
+    final screenHeight = Responsive.height(context);
+    final availableHeight = screenHeight - 150; // Subtract header and padding
+    final calculatedRowHeight = isLargeScreen ? (availableHeight / 6.5) : 65.0; // 6 rows + header
+    final rowHeight = calculatedRowHeight.clamp(80.0, 120.0); // Min 80, max 120
+
+    final fontSize = isLargeScreen ? 18.0 : 14.0;
+    final eventFontSize = isLargeScreen ? 12.0 : 9.0;
+    final headerFontSize = isLargeScreen ? 22.0 : 16.0;
+    final daysOfWeekHeight = isLargeScreen ? 45.0 : 32.0;
+    final cellBottomMargin = isLargeScreen ? (rowHeight - 30) : 41.0;
+    final eventAreaTop = isLargeScreen ? 32.0 : 25.0;
+    final eventAreaHeight = isLargeScreen ? (rowHeight - 38) : 32.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
