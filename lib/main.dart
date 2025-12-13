@@ -1819,6 +1819,11 @@ class _MyHomePageState extends State<MyHomePage> {
               color: Color(0xFF5A5A5A),
               fontSize: fontSize,
             ),
+            // Weekend dates - same size as weekday
+            weekendTextStyle: TextStyle(
+              color: Color(0xFF5A5A5A),
+              fontSize: fontSize,
+            ),
             selectedTextStyle: TextStyle(
               color: Color(0xFFFFFFFF),
               fontSize: fontSize,
