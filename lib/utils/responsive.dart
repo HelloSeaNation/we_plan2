@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 class Responsive {
   static bool isMobile(BuildContext context) =>
-      MediaQuery.of(context).size.width < 650;
+      MediaQuery.of(context).size.width < 600;
 
   static bool isTablet(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 650 &&
-      MediaQuery.of(context).size.width < 1100;
+      MediaQuery.of(context).size.width >= 600 &&
+      MediaQuery.of(context).size.width < 1200;
 
   static bool isDesktop(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 1100;
+      MediaQuery.of(context).size.width >= 1200;
 
   /// Returns true if the current device is in landscape orientation
   static bool isLandscape(BuildContext context) =>

@@ -90,15 +90,16 @@ void main() async {
         scaffoldBackgroundColor: kIsWeb ? Color(0xFFF5F7FA) : null,
       ),
       builder: (context, child) {
-        // Apply centered container to the entire app if on web/desktop
-        if (kIsWeb || Responsive.isDesktop(context)) {
+        // For web/desktop, only apply centered container on very large screens
+        // For tablet-sized screens (like Raspberry Pi), use full width
+        final screenWidth = MediaQuery.of(context).size.width;
+        if (kIsWeb && screenWidth > 1400) {
           return MediaQuery(
-            // Adjust font scale for readability
             data: MediaQuery.of(context).copyWith(
               textScaleFactor: 1.0,
             ),
             child: CenteredContainer(
-              maxWidth: 1200,
+              maxWidth: 1400,
               padding: EdgeInsets.zero,
               child: child!,
             ),
@@ -1628,13 +1629,13 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: CenteredContainer(
-        maxWidth: 1200,
+        maxWidth: Responsive.width(context) > 1400 ? 1400 : double.infinity,
         padding: EdgeInsets.symmetric(
           horizontal: Responsive.isMobile(context) ? 8 : 16,
           vertical: 8,
         ),
-        // Add card-like appearance on large screens
-        decoration: kIsWeb || Responsive.isDesktop(context)
+        // Add card-like appearance only on very large screens
+        decoration: kIsWeb && Responsive.width(context) > 1400
             ? BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
