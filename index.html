@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html style="height: 100%;">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -20,19 +20,36 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="weplan version 2">
 
+  <!-- Viewport for full screen -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="we_plan2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WePlan">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Android/Chrome full screen -->
+  <meta name="theme-color" content="#ffffff">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>we_plan2</title>
+  <title>WePlan</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+  </style>
 </head>
-<body>
+<body style="height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden;">
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
