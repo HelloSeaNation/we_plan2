@@ -208,6 +208,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _isKioskEnabled = false;
   bool _hideDeleteEdit = false;
   bool _isScreensaverActive = false;
+  String _screensaverImageUrl = '';
 
   @override
   void dispose() {
@@ -282,6 +283,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _isKioskEnabled = _kioskService.isEnabled;
       _hideDeleteEdit = _kioskService.hideDeleteEdit;
+      _screensaverImageUrl = _kioskService.screensaverImageUrl;
     });
 
     // Register callbacks
@@ -343,6 +345,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _isKioskEnabled = _kioskService.isEnabled;
       _hideDeleteEdit = _kioskService.hideDeleteEdit;
+      _screensaverImageUrl = _kioskService.screensaverImageUrl;
     });
 
     if (_isKioskEnabled) {
@@ -2056,31 +2059,96 @@ class _MyHomePageState extends State<MyHomePage> {
                 opacity: _isScreensaverActive ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 500),
                 child: Container(
-                  color: Colors.black.withOpacity(0.7),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.touch_app_outlined,
-                          size: 64,
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Tap to wake',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  color: Colors.black,
+                  child: _screensaverImageUrl.isNotEmpty
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // Background image
+                            Image.network(
+                              _screensaverImageUrl,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white.withOpacity(0.6),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildDefaultScreensaver();
+                              },
+                            ),
+                            // Semi-transparent overlay for "tap to wake" hint
+                            Container(
+                              color: Colors.black.withOpacity(0.3),
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.touch_app_outlined,
+                                        size: 32,
+                                        color: Colors.white.withOpacity(0.8),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Tap to wake',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.8),
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : _buildDefaultScreensaver(),
                 ),
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  // Helper method to build default screensaver (no image)
+  Widget _buildDefaultScreensaver() {
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.touch_app_outlined,
+              size: 64,
+              color: Colors.white.withOpacity(0.6),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Tap to wake',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

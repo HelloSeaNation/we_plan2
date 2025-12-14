@@ -36,6 +36,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _hideDeleteEdit = false;
   bool _screensaverEnabled = false;
   int _screensaverTimeout = KioskService.defaultScreensaverTimeout;
+  final TextEditingController _screensaverImageUrlController = TextEditingController();
 
   final List<int> _timeoutOptions = [1, 2, 5, 10, 15, 30];
 
@@ -68,12 +69,14 @@ class _SettingsPageState extends State<SettingsPage> {
       _hideDeleteEdit = kioskService.hideDeleteEdit;
       _screensaverEnabled = kioskService.screensaverEnabled;
       _screensaverTimeout = kioskService.screensaverTimeoutMinutes;
+      _screensaverImageUrlController.text = kioskService.screensaverImageUrl;
     });
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _screensaverImageUrlController.dispose();
     super.dispose();
   }
 
@@ -111,6 +114,7 @@ class _SettingsPageState extends State<SettingsPage> {
         hideDeleteEdit: _hideDeleteEdit,
         screensaverEnabled: _screensaverEnabled,
         screensaverTimeoutMinutes: _screensaverTimeout,
+        screensaverImageUrl: _screensaverImageUrlController.text.trim(),
       );
     }
 
@@ -489,6 +493,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           setState(() => _screensaverTimeout = value);
                         },
                       ),
+                      const SizedBox(height: 16),
+                      _buildImageUrlInput(),
                     ],
                   ],
                 ],
@@ -708,6 +714,138 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageUrlInput() {
+    final theme = Theme.of(context);
+    final isLargeScreen = Responsive.isTablet(context) || Responsive.isDesktop(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isLargeScreen ? 16 : 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.image_outlined,
+                  color: _selectedColor,
+                  size: isLargeScreen ? 28 : 24,
+                ),
+                SizedBox(width: isLargeScreen ? 16 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Screensaver Image',
+                        style: TextStyle(
+                          fontSize: isLargeScreen ? 16 : 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Enter image URL (leave empty for default)',
+                        style: TextStyle(
+                          fontSize: isLargeScreen ? 13 : 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _screensaverImageUrlController,
+              decoration: InputDecoration(
+                hintText: 'https://example.com/image.jpg',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: isLargeScreen ? 14 : 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: _selectedColor, width: 2),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: isLargeScreen ? 14 : 10,
+                ),
+                prefixIcon: Icon(Icons.link, color: Colors.grey[400]),
+              ),
+              style: TextStyle(fontSize: isLargeScreen ? 14 : 12),
+              keyboardType: TextInputType.url,
+            ),
+            // Preview image if URL is provided
+            if (_screensaverImageUrlController.text.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 120,
+                  width: double.infinity,
+                  color: Colors.grey[200],
+                  child: Image.network(
+                    _screensaverImageUrlController.text,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: _selectedColor,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image, color: Colors.grey[400], size: 32),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Invalid image URL',
+                              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
