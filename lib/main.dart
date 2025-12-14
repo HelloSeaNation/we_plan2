@@ -17,6 +17,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'event_model.dart';
 import 'services/calendar_widget_service.dart';
 import 'services/widget_service.dart';
+import 'services/kiosk_service.dart';
 import 'dart:convert';
 import 'platform/platform.dart';
 import 'package:flutter/foundation.dart';
@@ -202,12 +203,19 @@ class _MyHomePageState extends State<MyHomePage> {
   static const String _lastSyncTimestampKey = 'last_sync_timestamp';
   bool _isFirstLoad = true;
 
+  // Kiosk mode state
+  final KioskService _kioskService = KioskService();
+  bool _isKioskEnabled = false;
+  bool _hideDeleteEdit = false;
+  bool _isScreensaverActive = false;
+
   @override
   void dispose() {
     _deleteTimer?.cancel();
     _connectivitySubscription?.cancel();
     _titleController.dispose();
     _descController.dispose();
+    _kioskService.dispose();
     super.dispose();
   }
 
@@ -216,6 +224,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     _initConnectivity();
     _loadThemeColor();
+    _initKioskMode();
     // Create a normalized today date to avoid time component issues
     final today = DateTime(
       DateTime.now().year,
@@ -259,11 +268,89 @@ class _MyHomePageState extends State<MyHomePage> {
   // Create a separate method for day selection logic
   Future<void> _onDaySelected(DateTime selectedDay, DateTime focusedDay) async {
     HapticFeedback.selectionClick();
+    _onUserActivity(); // Reset kiosk timers
     setState(() {
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
     });
     await _fetchEventsFromFirestore(_selectedDay!);
+  }
+
+  // Initialize kiosk mode
+  Future<void> _initKioskMode() async {
+    await _kioskService.initialize();
+    setState(() {
+      _isKioskEnabled = _kioskService.isEnabled;
+      _hideDeleteEdit = _kioskService.hideDeleteEdit;
+    });
+
+    // Register callbacks
+    _kioskService.registerInactivityCallback(_onKioskInactivityTimeout);
+    _kioskService.registerScreensaverCallbacks(
+      onActivate: _onScreensaverActivate,
+      onDeactivate: _onScreensaverDeactivate,
+    );
+
+    // Start timers if kiosk mode is enabled
+    if (_isKioskEnabled) {
+      _kioskService.startTimers();
+    }
+  }
+
+  // Called when user interacts with the app
+  void _onUserActivity() {
+    if (_isKioskEnabled) {
+      _kioskService.onUserActivity();
+    }
+  }
+
+  // Called when kiosk inactivity timeout is reached
+  void _onKioskInactivityTimeout() {
+    if (!mounted) return;
+
+    // Return to today's date
+    final today = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
+
+    setState(() {
+      _selectedDay = today;
+      _focusedDay = today;
+    });
+
+    _fetchEventsFromFirestore(today);
+    _fetchEventsForVisibleMonth(today);
+
+    debugPrint('Kiosk: Auto-returned to today');
+  }
+
+  // Screensaver callbacks
+  void _onScreensaverActivate() {
+    if (!mounted) return;
+    setState(() => _isScreensaverActive = true);
+  }
+
+  void _onScreensaverDeactivate() {
+    if (!mounted) return;
+    setState(() => _isScreensaverActive = false);
+  }
+
+  // Reload kiosk settings (called after returning from settings)
+  Future<void> _reloadKioskSettings() async {
+    await _kioskService.initialize();
+    setState(() {
+      _isKioskEnabled = _kioskService.isEnabled;
+      _hideDeleteEdit = _kioskService.hideDeleteEdit;
+    });
+
+    if (_isKioskEnabled) {
+      _kioskService.startTimers();
+    } else {
+      _kioskService.stopTimers();
+      _isScreensaverActive = false;
+    }
   }
 
   Future<String> _getDeviceName() async {
@@ -298,6 +385,12 @@ class _MyHomePageState extends State<MyHomePage> {
     if (result != null) {
       // Reload theme color when returning from settings
       await _loadThemeColor();
+
+      // Reload kiosk settings if they changed
+      if (result['kioskSettingsChanged'] == true) {
+        await _reloadKioskSettings();
+      }
+
       setState(() {
         // This will refresh the UI with the new color
       });
@@ -1492,25 +1585,28 @@ class _MyHomePageState extends State<MyHomePage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.edit),
-                            label: const Text('Edit'),
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _showEditEventDialog(event);
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: _themeColor,
-                              side: BorderSide(color: _themeColor, width: 1.5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        // Only show Edit button when not in kiosk mode with delete/edit hidden
+                        if (!(_isKioskEnabled && _hideDeleteEdit))
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.edit),
+                              label: const Text('Edit'),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showEditEventDialog(event);
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: _themeColor,
+                                side: BorderSide(color: _themeColor, width: 1.5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                        if (!(_isKioskEnabled && _hideDeleteEdit))
+                          const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.close),
@@ -1680,7 +1776,15 @@ class _MyHomePageState extends State<MyHomePage> {
     final iconSize = isLargeScreen ? 24.0 : 20.0;
     final buttonFontSize = isLargeScreen ? 16.0 : 14.0;
 
-    return Scaffold(
+    return GestureDetector(
+      // Detect user activity for kiosk mode
+      onTap: _onUserActivity,
+      onPanDown: (_) => _onUserActivity(),
+      onScaleStart: (_) => _onUserActivity(),
+      behavior: HitTestBehavior.translucent,
+      child: Stack(
+        children: [
+          Scaffold(
       appBar: AppBar(
         toolbarHeight: isLargeScreen ? 64 : 56,
         title: isLargeScreen
@@ -1937,6 +2041,46 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           },
         ),
+      ),
+          ),
+          // Screensaver overlay
+          if (_isScreensaverActive)
+            GestureDetector(
+              onTap: () {
+                _onUserActivity();
+              },
+              onPanDown: (_) {
+                _onUserActivity();
+              },
+              child: AnimatedOpacity(
+                opacity: _isScreensaverActive ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 500),
+                child: Container(
+                  color: Colors.black.withOpacity(0.7),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.touch_app_outlined,
+                          size: 64,
+                          color: Colors.white.withOpacity(0.6),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Tap to wake',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -2231,50 +2375,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     final eventColor =
                         event.color ?? Theme.of(context).primaryColor;
 
-                    return Dismissible(
-                      key: Key(event.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: isLargeScreen ? 12 : 16,
-                          vertical: isLargeScreen ? 8 : 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red[400],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        alignment: Alignment.centerRight,
-                        padding: EdgeInsets.only(right: 24),
-                        child: Icon(
-                          Icons.delete_outline,
-                          color: Colors.white,
-                          size: isLargeScreen ? 32 : 28,
-                        ),
-                      ),
-                      confirmDismiss: (direction) async {
-                        return await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text('Delete Event'),
-                            content: Text('Are you sure you want to delete "${event.title}"?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: Text('Cancel'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                child: Text('Delete', style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      onDismissed: (direction) {
-                        _deleteEventFromFirestore(event, index);
-                      },
-                      child: Card(
+                    // Build the card widget
+                    final cardWidget = Card(
                         margin: EdgeInsets.symmetric(
                           horizontal: isLargeScreen ? 12 : 16,
                           vertical: isLargeScreen ? 10 : 6,
@@ -2296,7 +2398,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             HapticFeedback.lightImpact();
                             _showEventDetails(event);
                           },
-                          onLongPress: () {
+                          onLongPress: (_isKioskEnabled && _hideDeleteEdit) ? null : () {
                             HapticFeedback.mediumImpact();
                             _showEditEventDialog(event);
                           },
@@ -2396,17 +2498,69 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                   ),
                                   // Swipe hint icon
-                                  Icon(
-                                    Icons.chevron_left,
-                                    color: Colors.grey[300],
-                                    size: isLargeScreen ? 24 : 20,
-                                  ),
+                                  // Only show swipe hint when delete is enabled
+                                  if (!(_isKioskEnabled && _hideDeleteEdit))
+                                    Icon(
+                                      Icons.chevron_left,
+                                      color: Colors.grey[300],
+                                      size: isLargeScreen ? 24 : 20,
+                                    ),
                                 ],
                               ),
                             ),
                           ),
                         ),
+                    );
+
+                    // Wrap with Dismissible only if delete/edit is not hidden
+                    if (_isKioskEnabled && _hideDeleteEdit) {
+                      return cardWidget;
+                    }
+
+                    return Dismissible(
+                      key: Key(event.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: isLargeScreen ? 12 : 16,
+                          vertical: isLargeScreen ? 8 : 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red[400],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 24),
+                        child: Icon(
+                          Icons.delete_outline,
+                          color: Colors.white,
+                          size: isLargeScreen ? 32 : 28,
+                        ),
                       ),
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text('Delete Event'),
+                            content: Text('Are you sure you want to delete "${event.title}"?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                child: Text('Delete', style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      onDismissed: (direction) {
+                        _deleteEventFromFirestore(event, index);
+                      },
+                      child: cardWidget,
                     );
                   },
                 ),
