@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'share_setup_screen.dart';
 
 import 'firestore_service.dart';
+import 'utils/responsive.dart';
 
 class SettingsPage extends StatefulWidget {
   final String? currentDeviceName;
@@ -106,6 +108,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _selectColor(Color color) {
+    HapticFeedback.selectionClick();
     setState(() {
       _selectedColor = color;
     });
@@ -215,47 +218,66 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 16),
 
                 // Color grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 6,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: _colorOptions.length,
-                  itemBuilder: (context, index) {
-                    final color = _colorOptions[index];
-                    final isSelected = _selectedColor == color;
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isLargeScreen = Responsive.isTablet(context) || Responsive.isDesktop(context);
+                    final spacing = isLargeScreen ? 20.0 : 16.0;
 
-                    return GestureDetector(
-                      onTap: () => _selectColor(color),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color:
-                                isSelected ? Colors.white : Colors.transparent,
-                            width: 3,
-                          ),
-                          boxShadow:
-                              isSelected
-                                  ? [
-                                    BoxShadow(
-                                      color: color.withOpacity(0.4),
-                                      blurRadius: 8,
-                                      spreadRadius: 2,
-                                    ),
-                                  ]
-                                  : null,
-                        ),
-                        child:
-                            isSelected
-                                ? const Icon(Icons.check, color: Colors.white)
-                                : null,
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 6,
+                        crossAxisSpacing: spacing,
+                        mainAxisSpacing: spacing,
+                        childAspectRatio: 1.0,
                       ),
+                      itemCount: _colorOptions.length,
+                      itemBuilder: (context, index) {
+                        final color = _colorOptions[index];
+                        final isSelected = _selectedColor == color;
+
+                        return GestureDetector(
+                          onTap: () => _selectColor(color),
+                          child: Container(
+                            // Ensure minimum touch target size
+                            constraints: BoxConstraints(
+                              minWidth: isLargeScreen ? 56 : 48,
+                              minHeight: isLargeScreen ? 56 : 48,
+                            ),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      isSelected ? Colors.white : Colors.transparent,
+                                  width: isLargeScreen ? 4 : 3,
+                                ),
+                                boxShadow:
+                                    isSelected
+                                        ? [
+                                          BoxShadow(
+                                            color: color.withOpacity(0.4),
+                                            blurRadius: isLargeScreen ? 12 : 8,
+                                            spreadRadius: isLargeScreen ? 3 : 2,
+                                          ),
+                                        ]
+                                        : null,
+                              ),
+                              child:
+                                  isSelected
+                                      ? Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: isLargeScreen ? 28 : 24,
+                                        )
+                                      : null,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),

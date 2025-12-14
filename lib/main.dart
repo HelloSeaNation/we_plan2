@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'device_fingerprint.dart';
 import 'firestore_service.dart';
@@ -257,6 +258,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Create a separate method for day selection logic
   Future<void> _onDaySelected(DateTime selectedDay, DateTime focusedDay) async {
+    HapticFeedback.selectionClick();
     setState(() {
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
@@ -876,7 +878,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     onClear: () => setDialogState(() => startTime = null),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: isLargeScreen ? 16 : 12),
                                 Expanded(
                                   child: _buildTimeSelector(
                                     context: context,
@@ -920,7 +922,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: isLargeScreen ? 12 : 8),
                           ElevatedButton.icon(
                             onPressed: () {
                               if (formKey.currentState!.validate()) {
@@ -982,12 +984,18 @@ class _MyHomePageState extends State<MyHomePage> {
         : 'Optional';
 
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       borderRadius: BorderRadius.circular(12),
+      splashFactory: InkRipple.splashFactory,
+      splashColor: _themeColor.withOpacity(0.3),
+      highlightColor: _themeColor.withOpacity(0.1),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: isLargeScreen ? 14 : 12,
+          horizontal: isLargeScreen ? 16 : 12,
+          vertical: isLargeScreen ? 20 : 12,
         ),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey[300]!),
@@ -998,7 +1006,7 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             Icon(
               Icons.access_time,
-              size: isLargeScreen ? 22 : 18,
+              size: isLargeScreen ? 24 : 18,
               color: hasTime ? _themeColor : Colors.grey[400],
             ),
             const SizedBox(width: 8),
@@ -1955,7 +1963,34 @@ class _MyHomePageState extends State<MyHomePage> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TableCalendar(
+        GestureDetector(
+          onHorizontalDragEnd: (details) {
+            // Swipe right to go to previous month
+            if (details.primaryVelocity! > 0) {
+              HapticFeedback.lightImpact();
+              setState(() {
+                _focusedDay = DateTime(
+                  _focusedDay.year,
+                  _focusedDay.month - 1,
+                  1,
+                );
+                _fetchEventsForVisibleMonth(_focusedDay);
+              });
+            }
+            // Swipe left to go to next month
+            else if (details.primaryVelocity! < 0) {
+              HapticFeedback.lightImpact();
+              setState(() {
+                _focusedDay = DateTime(
+                  _focusedDay.year,
+                  _focusedDay.month + 1,
+                  1,
+                );
+                _fetchEventsForVisibleMonth(_focusedDay);
+              });
+            }
+          },
+          child: TableCalendar(
           firstDay: DateTime.utc(2010, 10, 16),
           lastDay: DateTime.utc(2050, 3, 14),
           focusedDay: _focusedDay,
@@ -2101,6 +2136,7 @@ class _MyHomePageState extends State<MyHomePage> {
           },
           eventLoader: (day) => _getEventsForDay(day),
           onDaySelected: _onDaySelected,
+          ),
         ),
       ],
     );
@@ -2241,7 +2277,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       child: Card(
                         margin: EdgeInsets.symmetric(
                           horizontal: isLargeScreen ? 12 : 16,
-                          vertical: isLargeScreen ? 8 : 6,
+                          vertical: isLargeScreen ? 10 : 6,
                         ),
                         elevation: isLargeScreen ? 2 : 1,
                         shape: RoundedRectangleBorder(
@@ -2253,8 +2289,17 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
-                          onTap: () => _showEventDetails(event),
-                          onLongPress: () => _showEditEventDialog(event),
+                          splashFactory: InkRipple.splashFactory,
+                          splashColor: eventColor.withOpacity(0.3),
+                          highlightColor: eventColor.withOpacity(0.1),
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _showEventDetails(event);
+                          },
+                          onLongPress: () {
+                            HapticFeedback.mediumImpact();
+                            _showEditEventDialog(event);
+                          },
                           child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
