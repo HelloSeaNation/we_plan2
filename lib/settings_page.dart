@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'share_setup_screen.dart';
 
 import 'firestore_service.dart';
+import 'services/kiosk_service.dart';
 import 'utils/responsive.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -29,6 +30,15 @@ class _SettingsPageState extends State<SettingsPage> {
   late Color _selectedColor;
   bool _isSaving = false;
 
+  // Kiosk mode settings
+  bool _kioskEnabled = false;
+  int _inactivityTimeout = KioskService.defaultInactivityTimeout;
+  bool _hideDeleteEdit = false;
+  bool _screensaverEnabled = false;
+  int _screensaverTimeout = KioskService.defaultScreensaverTimeout;
+
+  final List<int> _timeoutOptions = [1, 2, 5, 10, 15, 30];
+
   final List<Color> _colorOptions = [
     Colors.orange,
     const Color(0xFF27B174),
@@ -46,6 +56,19 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     _selectedColor = widget.currentColor ?? Colors.blue;
     _loadSavedColor();
+    _loadKioskSettings();
+  }
+
+  Future<void> _loadKioskSettings() async {
+    final kioskService = KioskService();
+    await kioskService.initialize();
+    setState(() {
+      _kioskEnabled = kioskService.isEnabled;
+      _inactivityTimeout = kioskService.inactivityTimeoutMinutes;
+      _hideDeleteEdit = kioskService.hideDeleteEdit;
+      _screensaverEnabled = kioskService.screensaverEnabled;
+      _screensaverTimeout = kioskService.screensaverTimeoutMinutes;
+    });
   }
 
   @override
@@ -80,6 +103,17 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     }
 
+    // Save kiosk settings
+    if (!widget.isFirstTime) {
+      await KioskService().updateSettings(
+        enabled: _kioskEnabled,
+        inactivityTimeoutMinutes: _inactivityTimeout,
+        hideDeleteEdit: _hideDeleteEdit,
+        screensaverEnabled: _screensaverEnabled,
+        screensaverTimeoutMinutes: _screensaverTimeout,
+      );
+    }
+
     if (widget.isFirstTime) {
       await prefs.setBool('first_time', false);
       if (!mounted) return;
@@ -92,6 +126,8 @@ class _SettingsPageState extends State<SettingsPage> {
       Navigator.pop(context, {
         'deviceName': _nameController.text,
         'color': _selectedColor,
+        'kioskEnabled': _kioskEnabled,
+        'kioskSettingsChanged': true,
       });
     }
   }
@@ -379,6 +415,84 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
 
+                // Kiosk Mode section (only show when not first time)
+                if (!widget.isFirstTime) ...[
+                  const SizedBox(height: 48),
+                  _buildSectionTitle('Kiosk Mode'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Optimize for wall-mounted displays and touchscreens',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Kiosk mode toggle
+                  _buildKioskToggle(
+                    icon: Icons.tv,
+                    title: 'Enable Kiosk Mode',
+                    subtitle: 'Auto-return to today after inactivity',
+                    value: _kioskEnabled,
+                    onChanged: (value) {
+                      HapticFeedback.selectionClick();
+                      setState(() => _kioskEnabled = value);
+                    },
+                  ),
+
+                  // Inactivity timeout (only show when kiosk enabled)
+                  if (_kioskEnabled) ...[
+                    const SizedBox(height: 16),
+                    _buildTimeoutSelector(
+                      icon: Icons.timer_outlined,
+                      title: 'Auto-return timeout',
+                      value: _inactivityTimeout,
+                      onChanged: (value) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _inactivityTimeout = value);
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+                    _buildKioskToggle(
+                      icon: Icons.lock_outline,
+                      title: 'Hide Delete/Edit',
+                      subtitle: 'Prevent event modifications',
+                      value: _hideDeleteEdit,
+                      onChanged: (value) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _hideDeleteEdit = value);
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+                    _buildKioskToggle(
+                      icon: Icons.brightness_2_outlined,
+                      title: 'Enable Screensaver',
+                      subtitle: 'Dim screen after extended inactivity',
+                      value: _screensaverEnabled,
+                      onChanged: (value) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _screensaverEnabled = value);
+                      },
+                    ),
+
+                    if (_screensaverEnabled) ...[
+                      const SizedBox(height: 16),
+                      _buildTimeoutSelector(
+                        icon: Icons.bedtime_outlined,
+                        title: 'Screensaver timeout',
+                        value: _screensaverTimeout,
+                        onChanged: (value) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _screensaverTimeout = value);
+                        },
+                      ),
+                    ],
+                  ],
+                ],
+
                 const SizedBox(height: 40),
 
                 // Save button
@@ -446,6 +560,157 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildKioskToggle({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isLargeScreen = Responsive.isTablet(context) || Responsive.isDesktop(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isLargeScreen ? 20 : 16,
+            vertical: isLargeScreen ? 16 : 12,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: value ? _selectedColor : Colors.grey[400],
+                size: isLargeScreen ? 28 : 24,
+              ),
+              SizedBox(width: isLargeScreen ? 16 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: isLargeScreen ? 16 : 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: isLargeScreen ? 13 : 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: value,
+                onChanged: onChanged,
+                activeColor: _selectedColor,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeoutSelector({
+    required IconData icon,
+    required String title,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isLargeScreen = Responsive.isTablet(context) || Responsive.isDesktop(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isLargeScreen ? 20 : 16,
+          vertical: isLargeScreen ? 12 : 8,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: _selectedColor,
+              size: isLargeScreen ? 28 : 24,
+            ),
+            SizedBox(width: isLargeScreen ? 16 : 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 16 : 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isLargeScreen ? 12 : 8,
+              ),
+              decoration: BoxDecoration(
+                color: _selectedColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButton<int>(
+                value: value,
+                underline: const SizedBox(),
+                icon: Icon(Icons.arrow_drop_down, color: _selectedColor),
+                style: TextStyle(
+                  color: _selectedColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: isLargeScreen ? 15 : 14,
+                ),
+                items: _timeoutOptions.map((minutes) {
+                  return DropdownMenuItem<int>(
+                    value: minutes,
+                    child: Text('$minutes min'),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    onChanged(newValue);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
