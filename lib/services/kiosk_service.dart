@@ -15,6 +15,7 @@ class KioskService {
   static const String _keyHideDeleteEdit = 'kiosk_hide_delete_edit';
   static const String _keyScreensaverEnabled = 'kiosk_screensaver_enabled';
   static const String _keyScreensaverTimeout = 'kiosk_screensaver_timeout';
+  static const String _keyScreensaverImageUrl = 'kiosk_screensaver_image_url';
 
   // Default values
   static const int defaultInactivityTimeout = 5; // minutes
@@ -26,6 +27,7 @@ class KioskService {
   bool _hideDeleteEdit = false;
   bool _screensaverEnabled = false;
   int _screensaverTimeoutMinutes = defaultScreensaverTimeout;
+  String _screensaverImageUrl = '';
 
   // Timers
   Timer? _inactivityTimer;
@@ -45,6 +47,7 @@ class KioskService {
   bool get hideDeleteEdit => _hideDeleteEdit;
   bool get screensaverEnabled => _screensaverEnabled;
   int get screensaverTimeoutMinutes => _screensaverTimeoutMinutes;
+  String get screensaverImageUrl => _screensaverImageUrl;
   bool get isScreensaverActive => _isScreensaverActive;
 
   /// Initialize kiosk service and load settings from SharedPreferences
@@ -56,6 +59,7 @@ class KioskService {
       _hideDeleteEdit = prefs.getBool(_keyHideDeleteEdit) ?? false;
       _screensaverEnabled = prefs.getBool(_keyScreensaverEnabled) ?? false;
       _screensaverTimeoutMinutes = prefs.getInt(_keyScreensaverTimeout) ?? defaultScreensaverTimeout;
+      _screensaverImageUrl = prefs.getString(_keyScreensaverImageUrl) ?? '';
 
       debugPrint('KioskService initialized: enabled=$_isEnabled, timeout=$_inactivityTimeoutMinutes min');
     } catch (e) {
@@ -145,6 +149,7 @@ class KioskService {
     bool? hideDeleteEdit,
     bool? screensaverEnabled,
     int? screensaverTimeoutMinutes,
+    String? screensaverImageUrl,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -172,6 +177,11 @@ class KioskService {
       if (screensaverTimeoutMinutes != null) {
         _screensaverTimeoutMinutes = screensaverTimeoutMinutes;
         await prefs.setInt(_keyScreensaverTimeout, screensaverTimeoutMinutes);
+      }
+
+      if (screensaverImageUrl != null) {
+        _screensaverImageUrl = screensaverImageUrl;
+        await prefs.setString(_keyScreensaverImageUrl, screensaverImageUrl);
       }
 
       // Restart timers with new settings if enabled
