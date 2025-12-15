@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -97,9 +98,7 @@ void main() async {
         final screenWidth = MediaQuery.of(context).size.width;
         if (kIsWeb && screenWidth > 1400) {
           return MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaleFactor: 1.0,
-            ),
+            data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
             child: CenteredContainer(
               maxWidth: 1400,
               padding: EdgeInsets.zero,
@@ -112,11 +111,8 @@ void main() async {
       home: isFirstTime
           ? const SettingsPage(isFirstTime: true)
           : shareCode == null
-              ? const ShareSetupScreen(isFirstTime: false)
-              : const MyHomePage(
-                  title: '',
-                  isFirstLoad: true,
-                ),
+          ? const ShareSetupScreen(isFirstTime: false)
+          : const MyHomePage(title: '', isFirstLoad: true),
       debugShowCheckedModeBanner: false,
     ),
   );
@@ -203,12 +199,17 @@ class _MyHomePageState extends State<MyHomePage> {
   static const String _lastSyncTimestampKey = 'last_sync_timestamp';
   bool _isFirstLoad = true;
 
+  // Events panel visibility (for tablet/desktop sliding panel)
+  bool _isEventsPanelVisible = false;
+
   // Kiosk mode state
   final KioskService _kioskService = KioskService();
   bool _isKioskEnabled = false;
   bool _hideDeleteEdit = false;
   bool _isScreensaverActive = false;
   String _screensaverImageUrl = '';
+  bool _useImageFolder = false;
+  String _currentSlideshowImage = '';
 
   @override
   void dispose() {
@@ -273,6 +274,11 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
+      // Show the events panel on tablet/desktop when a day is selected
+      final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+      if (isLargeScreen) {
+        _isEventsPanelVisible = true;
+      }
     });
     await _fetchEventsFromFirestore(_selectedDay!);
   }
@@ -284,6 +290,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _isKioskEnabled = _kioskService.isEnabled;
       _hideDeleteEdit = _kioskService.hideDeleteEdit;
       _screensaverImageUrl = _kioskService.screensaverImageUrl;
+      _useImageFolder = _kioskService.useFolder;
+      _currentSlideshowImage = _kioskService.currentImagePath;
     });
 
     // Register callbacks
@@ -292,11 +300,20 @@ class _MyHomePageState extends State<MyHomePage> {
       onActivate: _onScreensaverActivate,
       onDeactivate: _onScreensaverDeactivate,
     );
+    _kioskService.registerImageChangeCallback(_onSlideshowImageChange);
 
     // Start timers if kiosk mode is enabled
     if (_isKioskEnabled) {
       _kioskService.startTimers();
     }
+  }
+
+  // Called when slideshow image changes
+  void _onSlideshowImageChange() {
+    if (!mounted) return;
+    setState(() {
+      _currentSlideshowImage = _kioskService.currentImagePath;
+    });
   }
 
   // Called when user interacts with the app
@@ -346,6 +363,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _isKioskEnabled = _kioskService.isEnabled;
       _hideDeleteEdit = _kioskService.hideDeleteEdit;
       _screensaverImageUrl = _kioskService.screensaverImageUrl;
+      _useImageFolder = _kioskService.useFolder;
+      _currentSlideshowImage = _kioskService.currentImagePath;
     });
 
     if (_isKioskEnabled) {
@@ -586,11 +605,7 @@ class _MyHomePageState extends State<MyHomePage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          icon: const Icon(
-            Icons.wifi_off_rounded,
-            color: Colors.red,
-            size: 36,
-          ),
+          icon: const Icon(Icons.wifi_off_rounded, color: Colors.red, size: 36),
           title: const Text(
             'You\'re Offline',
             textAlign: TextAlign.center,
@@ -682,7 +697,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: Text(
                             'Edit Event',
                             style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 18),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
                           ),
                         ),
                       ],
@@ -697,10 +714,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          DateFormat('EEEE, MMMM d, yyyy')
-                              .format(_selectedDay!),
-                          style:
-                              TextStyle(color: Colors.grey[600], fontSize: 14),
+                          DateFormat(
+                            'EEEE, MMMM d, yyyy',
+                          ).format(_selectedDay!),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -710,13 +730,17 @@ class _MyHomePageState extends State<MyHomePage> {
                             labelStyle: TextStyle(color: _themeColor),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  BorderSide(color: _themeColor, width: 1.5),
+                              borderSide: BorderSide(
+                                color: _themeColor,
+                                width: 1.5,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                                  BorderSide(color: _themeColor, width: 2),
+                              borderSide: BorderSide(
+                                color: _themeColor,
+                                width: 2,
+                              ),
                             ),
                             filled: true,
                             fillColor: Colors.grey[50],
@@ -743,7 +767,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           icon: const Icon(Icons.close),
                           label: const Text('Cancel'),
                           style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey[700]),
+                            foregroundColor: Colors.grey[700],
+                          ),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton.icon(
@@ -768,12 +793,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
                             // Update local UI
                             setState(() {
-                              final index =
-                                  _events[dateText(_selectedDay!)]!.indexWhere(
-                                (e) =>
-                                    e.title == oldEvent.title &&
-                                    e.description == oldEvent.description,
-                              );
+                              final index = _events[dateText(_selectedDay!)]!
+                                  .indexWhere(
+                                    (e) =>
+                                        e.title == oldEvent.title &&
+                                        e.description == oldEvent.description,
+                                  );
                               if (index != -1) {
                                 _events[dateText(_selectedDay!)]![index] =
                                     newEvent;
@@ -812,14 +837,15 @@ class _MyHomePageState extends State<MyHomePage> {
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content:
-                                          Text('Failed to update event: $e')),
+                                    content: Text('Failed to update event: $e'),
+                                  ),
                                 );
                               }
                             } else {
                               // Queue edit for later sync
-                              final queue =
-                                  Hive.box<OfflineAction>('actionQueue');
+                              final queue = Hive.box<OfflineAction>(
+                                'actionQueue',
+                              );
                               queue.add(
                                 OfflineAction(
                                   type: ActionType.edit,
@@ -835,7 +861,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                    content: Text("Edit saved offline.")),
+                                  content: Text("Edit saved offline."),
+                                ),
                               );
                             }
                           },
@@ -874,7 +901,8 @@ class _MyHomePageState extends State<MyHomePage> {
       tablet: Responsive.width(context) * 0.7,
       desktop: Responsive.width(context) * 0.4,
     );
-    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final isLargeScreen =
+        Responsive.isDesktop(context) || Responsive.isTablet(context);
 
     showDialog(
       context: context,
@@ -899,7 +927,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
                         children: [
-                          Icon(Icons.event_available, color: _themeColor, size: isLargeScreen ? 28 : 24),
+                          Icon(
+                            Icons.event_available,
+                            color: _themeColor,
+                            size: isLargeScreen ? 28 : 24,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'Add Event',
@@ -922,8 +954,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              DateFormat('EEEE, MMMM d, yyyy')
-                                  .format(_selectedDay!),
+                              DateFormat(
+                                'EEEE, MMMM d, yyyy',
+                              ).format(_selectedDay!),
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: isLargeScreen ? 16 : 14,
@@ -932,10 +965,14 @@ class _MyHomePageState extends State<MyHomePage> {
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _titleController,
-                              style: TextStyle(fontSize: isLargeScreen ? 18 : 16),
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 18 : 16,
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Event title',
-                                labelStyle: TextStyle(fontSize: isLargeScreen ? 16 : 14),
+                                labelStyle: TextStyle(
+                                  fontSize: isLargeScreen ? 16 : 14,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -946,7 +983,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                   vertical: isLargeScreen ? 16 : 12,
                                 ),
                               ),
-                              validator: (value) => value == null || value.isEmpty
+                              validator: (value) =>
+                                  value == null || value.isEmpty
                                   ? 'Please enter an event title'
                                   : null,
                               autofocus: true,
@@ -965,13 +1003,17 @@ class _MyHomePageState extends State<MyHomePage> {
                                     onTap: () async {
                                       final picked = await showTimePicker(
                                         context: context,
-                                        initialTime: startTime ?? TimeOfDay.now(),
+                                        initialTime:
+                                            startTime ?? TimeOfDay.now(),
                                       );
                                       if (picked != null) {
-                                        setDialogState(() => startTime = picked);
+                                        setDialogState(
+                                          () => startTime = picked,
+                                        );
                                       }
                                     },
-                                    onClear: () => setDialogState(() => startTime = null),
+                                    onClear: () =>
+                                        setDialogState(() => startTime = null),
                                   ),
                                 ),
                                 SizedBox(width: isLargeScreen ? 16 : 12),
@@ -984,13 +1026,17 @@ class _MyHomePageState extends State<MyHomePage> {
                                     onTap: () async {
                                       final picked = await showTimePicker(
                                         context: context,
-                                        initialTime: endTime ?? startTime ?? TimeOfDay.now(),
+                                        initialTime:
+                                            endTime ??
+                                            startTime ??
+                                            TimeOfDay.now(),
                                       );
                                       if (picked != null) {
                                         setDialogState(() => endTime = picked);
                                       }
                                     },
-                                    onClear: () => setDialogState(() => endTime = null),
+                                    onClear: () =>
+                                        setDialogState(() => endTime = null),
                                   ),
                                 ),
                               ],
@@ -1008,8 +1054,16 @@ class _MyHomePageState extends State<MyHomePage> {
                         children: [
                           TextButton.icon(
                             onPressed: () => Navigator.pop(context),
-                            icon: Icon(Icons.close, size: isLargeScreen ? 22 : 18),
-                            label: Text('Cancel', style: TextStyle(fontSize: isLargeScreen ? 16 : 14)),
+                            icon: Icon(
+                              Icons.close,
+                              size: isLargeScreen ? 22 : 18,
+                            ),
+                            label: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 16 : 14,
+                              ),
+                            ),
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.grey[700],
                               padding: EdgeInsets.symmetric(
@@ -1037,8 +1091,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                 }
                               }
                             },
-                            icon: Icon(Icons.done, size: isLargeScreen ? 22 : 18),
-                            label: Text('Save', style: TextStyle(fontSize: isLargeScreen ? 16 : 14)),
+                            icon: Icon(
+                              Icons.done,
+                              size: isLargeScreen ? 22 : 18,
+                            ),
+                            label: Text(
+                              'Save',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 16 : 14,
+                              ),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _themeColor,
                               foregroundColor: Colors.white,
@@ -1149,8 +1211,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final fingerprint = await DeviceFingerprint.generate();
 
     final cachedEvent = CachedEvent(
-      id: DateTime.now()
-          .millisecondsSinceEpoch
+      id: DateTime.now().millisecondsSinceEpoch
           .toString(), // temporary local ID
       title: event.title,
       description: event.description,
@@ -1257,7 +1318,10 @@ class _MyHomePageState extends State<MyHomePage> {
               deviceName: e.deviceName,
               color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
               startTime: e.startTimeHour != null && e.startTimeMinute != null
-                  ? TimeOfDay(hour: e.startTimeHour!, minute: e.startTimeMinute!)
+                  ? TimeOfDay(
+                      hour: e.startTimeHour!,
+                      minute: e.startTimeMinute!,
+                    )
                   : null,
               endTime: e.endTimeHour != null && e.endTimeMinute != null
                   ? TimeOfDay(hour: e.endTimeHour!, minute: e.endTimeMinute!)
@@ -1302,11 +1366,20 @@ class _MyHomePageState extends State<MyHomePage> {
           color: data['color_value'] != null
               ? Color(data['color_value'])
               : Colors.blue,
-          startTime: data['start_time_hour'] != null && data['start_time_minute'] != null
-              ? TimeOfDay(hour: data['start_time_hour'], minute: data['start_time_minute'])
+          startTime:
+              data['start_time_hour'] != null &&
+                  data['start_time_minute'] != null
+              ? TimeOfDay(
+                  hour: data['start_time_hour'],
+                  minute: data['start_time_minute'],
+                )
               : null,
-          endTime: data['end_time_hour'] != null && data['end_time_minute'] != null
-              ? TimeOfDay(hour: data['end_time_hour'], minute: data['end_time_minute'])
+          endTime:
+              data['end_time_hour'] != null && data['end_time_minute'] != null
+              ? TimeOfDay(
+                  hour: data['end_time_hour'],
+                  minute: data['end_time_minute'],
+                )
               : null,
         );
         events.add(event);
@@ -1471,9 +1544,11 @@ class _MyHomePageState extends State<MyHomePage> {
     final startDay = DateTime.utc(focusedDay.year, focusedDay.month, 1);
     final endDay = DateTime.utc(focusedDay.year, focusedDay.month + 1, 0);
 
-    for (var day = startDay;
-        !day.isAfter(endDay); //
-        day = day.add(const Duration(days: 1))) {
+    for (
+      var day = startDay;
+      !day.isAfter(endDay); //
+      day = day.add(const Duration(days: 1))
+    ) {
       await _fetchEventsFromFirestore(day);
     }
   }
@@ -1560,8 +1635,10 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(event.description,
-                              style: TextStyle(fontSize: 16)),
+                          Text(
+                            event.description,
+                            style: TextStyle(fontSize: 16),
+                          ),
                           const SizedBox(height: 12),
                         ],
 
@@ -1573,7 +1650,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                 event.deviceName ??
                                     "Device ${event.fingerprint!.substring(0, 6)}",
                                 style: TextStyle(
-                                    fontSize: 14, color: Colors.grey[700]),
+                                  fontSize: 14,
+                                  color: Colors.grey[700],
+                                ),
                               ),
                             ],
                           ),
@@ -1600,11 +1679,16 @@ class _MyHomePageState extends State<MyHomePage> {
                               },
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: _themeColor,
-                                side: BorderSide(color: _themeColor, width: 1.5),
+                                side: BorderSide(
+                                  color: _themeColor,
+                                  width: 1.5,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
@@ -1669,9 +1753,11 @@ class _MyHomePageState extends State<MyHomePage> {
       final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
 
       // Loop through all days in the current month
-      for (DateTime date = currentMonth;
-          date.isBefore(lastDayOfMonth.add(const Duration(days: 1)));
-          date = date.add(const Duration(days: 1))) {
+      for (
+        DateTime date = currentMonth;
+        date.isBefore(lastDayOfMonth.add(const Duration(days: 1)));
+        date = date.add(const Duration(days: 1))
+      ) {
         final dateKey = dateText(date);
         final hasEvents = _events[dateKey]?.isNotEmpty ?? false;
         eventDays[dateKey] = hasEvents;
@@ -1679,8 +1765,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
       // Update the calendar widget
       await _widgetService.updateWidget(
-        eventTitle:
-            eventTitles.isEmpty ? 'No events today' : eventTitles.join('\n'),
+        eventTitle: eventTitles.isEmpty
+            ? 'No events today'
+            : eventTitles.join('\n'),
         eventDays: eventDays,
       );
     } catch (e) {
@@ -1692,23 +1779,29 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _saveEventsToCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final eventsMap = _events.map((key, value) => MapEntry(
-            key,
-            value
-                .map((e) => {
-                      'id': e.id,
-                      'title': e.title,
-                      'description': e.description,
-                      'fingerprint': e.fingerprint,
-                      'deviceName': e.deviceName,
-                      'colorValue': e.color?.value,
-                    })
-                .toList(),
-          ));
+      final eventsMap = _events.map(
+        (key, value) => MapEntry(
+          key,
+          value
+              .map(
+                (e) => {
+                  'id': e.id,
+                  'title': e.title,
+                  'description': e.description,
+                  'fingerprint': e.fingerprint,
+                  'deviceName': e.deviceName,
+                  'colorValue': e.color?.value,
+                },
+              )
+              .toList(),
+        ),
+      );
 
       await prefs.setString(_cachedEventsKey, jsonEncode(eventsMap));
       await prefs.setString(
-          _lastSyncTimestampKey, DateTime.now().toIso8601String());
+        _lastSyncTimestampKey,
+        DateTime.now().toIso8601String(),
+      );
       debugPrint('✅ Events cached successfully');
     } catch (e) {
       debugPrint('❌ Error caching events: $e');
@@ -1727,15 +1820,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
         decodedEvents.forEach((key, value) {
           loadedEvents[key] = (value as List)
-              .map((e) => Event(
-                    id: e['id'],
-                    title: e['title'],
-                    description: e['description'],
-                    fingerprint: e['fingerprint'],
-                    deviceName: e['deviceName'],
-                    color:
-                        e['colorValue'] != null ? Color(e['colorValue']) : null,
-                  ))
+              .map(
+                (e) => Event(
+                  id: e['id'],
+                  title: e['title'],
+                  description: e['description'],
+                  fingerprint: e['fingerprint'],
+                  deviceName: e['deviceName'],
+                  color: e['colorValue'] != null
+                      ? Color(e['colorValue'])
+                      : null,
+                ),
+              )
               .toList();
         });
 
@@ -1766,16 +1862,15 @@ class _MyHomePageState extends State<MyHomePage> {
       style: TextButton.styleFrom(
         foregroundColor: Colors.black87,
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final isLargeScreen =
+        Responsive.isDesktop(context) || Responsive.isTablet(context);
     final iconSize = isLargeScreen ? 24.0 : 20.0;
     final buttonFontSize = isLargeScreen ? 16.0 : 14.0;
 
@@ -1788,263 +1883,310 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Stack(
         children: [
           Scaffold(
-      appBar: AppBar(
-        toolbarHeight: isLargeScreen ? 64 : 56,
-        title: isLargeScreen
-            ? Row(
-                children: [
-                  // App title/logo for tablet
-                  Text(
-                    'WePlan',
-                    style: TextStyle(
-                      fontSize: isLargeScreen ? 24 : 20,
-                      fontWeight: FontWeight.bold,
-                      color: _themeColor,
+            appBar: AppBar(
+              toolbarHeight: isLargeScreen ? 64 : 56,
+              title: isLargeScreen
+                  ? Row(
+                      children: [
+                        // App title/logo for tablet
+                        Text(
+                          'WePlan',
+                          style: TextStyle(
+                            fontSize: isLargeScreen ? 24 : 20,
+                            fontWeight: FontWeight.bold,
+                            color: _themeColor,
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        // Menu options with larger touch targets
+                        _buildAppBarButton(
+                          icon: Icons.settings_outlined,
+                          label: 'Settings',
+                          onPressed: () => _navigateToSettings(),
+                          iconSize: iconSize,
+                          fontSize: buttonFontSize,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildAppBarButton(
+                          icon: Icons.share_outlined,
+                          label: 'Share',
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            final shareCode = prefs.getString('shareCode');
+                            if (shareCode != null) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ShareScreen(
+                                    shareCode: shareCode,
+                                    isFirstTimeUser: false,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'No share code found. Please setup sharing first.',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          iconSize: iconSize,
+                          fontSize: buttonFontSize,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildAppBarButton(
+                          icon: Icons.group_add_outlined,
+                          label: 'Join',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ShareSetupScreen(isFirstTime: false),
+                              ),
+                            );
+                          },
+                          iconSize: iconSize,
+                          fontSize: buttonFontSize,
+                        ),
+                      ],
+                    )
+                  : Text(widget.title),
+              leading: isLargeScreen
+                  ? null
+                  : PopupMenuButton<String>(
+                      icon: Icon(Icons.more_horiz),
+                      onSelected: (value) async {
+                        if (value == 'share') {
+                          final prefs = await SharedPreferences.getInstance();
+                          final shareCode = prefs.getString('shareCode');
+                          if (shareCode != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ShareScreen(
+                                  shareCode:
+                                      shareCode, // This is passed to ShareScreen widget
+                                  isFirstTimeUser:
+                                      false, // Explicitly set to false
+                                ),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'No share code found. Please setup sharing first.',
+                                ),
+                              ),
+                            );
+                          }
+                        } else if (value == 'settings') {
+                          await _navigateToSettings();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem<String>(
+                          value: 'settings',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.settings_outlined,
+                                color: _themeColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Settings'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.share_outlined,
+                                color: _themeColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Share Calendar'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'setup',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.group_add_outlined,
+                                color: _themeColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Create/Join Calendar'),
+                            ],
+                          ),
+                          onTap: () {
+                            Future.delayed(Duration.zero, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ShareSetupScreen(isFirstTime: false),
+                                ),
+                              );
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+              actions: [
+                // Connection status indicator
+                if (!_isOnline)
+                  Padding(
+                    padding: EdgeInsets.only(right: isLargeScreen ? 16 : 8),
+                    child: Icon(
+                      Icons.wifi_off,
+                      color: Colors.red,
+                      size: isLargeScreen ? 28 : 24,
                     ),
                   ),
-                  const SizedBox(width: 32),
-                  // Menu options with larger touch targets
-                  _buildAppBarButton(
-                    icon: Icons.settings_outlined,
-                    label: 'Settings',
-                    onPressed: () => _navigateToSettings(),
-                    iconSize: iconSize,
-                    fontSize: buttonFontSize,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildAppBarButton(
-                    icon: Icons.share_outlined,
-                    label: 'Share',
-                    onPressed: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      final shareCode = prefs.getString('shareCode');
-                      if (shareCode != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ShareScreen(
-                              shareCode: shareCode,
-                              isFirstTimeUser: false,
+                // Add event button - larger for tablet
+                Padding(
+                  padding: EdgeInsets.only(right: isLargeScreen ? 16 : 8),
+                  child: isLargeScreen
+                      ? ElevatedButton.icon(
+                          icon: Icon(Icons.add, size: 22),
+                          label: Text(
+                            'Add Event',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                          onPressed: _selectedDay != null
+                              ? _showAddEventDialog
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _themeColor,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'No share code found. Please setup sharing first.',
+                        )
+                      : IconButton(
+                          icon: Icon(Icons.add),
+                          onPressed: _selectedDay != null
+                              ? _showAddEventDialog
+                              : null,
+                        ),
+                ),
+              ],
+            ),
+            body: CenteredContainer(
+              maxWidth: Responsive.width(context) > 1400
+                  ? 1400
+                  : double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: Responsive.isMobile(context) ? 8 : 16,
+                vertical: 8,
+              ),
+              // Add card-like appearance only on very large screens
+              decoration: kIsWeb && Responsive.width(context) > 1400
+                  ? BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    )
+                  : null,
+              child: OrientationBuilder(
+                builder: (context, orientation) {
+                  final isLargeScreen =
+                      Responsive.isDesktop(context) ||
+                      Responsive.isTablet(context);
+
+                  // For tablet and desktop, calendar is full width with sliding events panel
+                  if (isLargeScreen) {
+                    final panelWidth = MediaQuery.of(context).size.width * 0.3;
+                    return Stack(
+                      children: [
+                        // Calendar section - takes full width
+                        _buildCalendarSection(),
+
+                        // Sliding events panel from right
+                        AnimatedPositioned(
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          top: 0,
+                          bottom: 0,
+                          right: _isEventsPanelVisible ? 0 : -panelWidth,
+                          width: panelWidth,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 10,
+                                  offset: Offset(-2, 0),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                // Close button header
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.close, size: 24),
+                                        onPressed: () {
+                                          setState(() {
+                                            _isEventsPanelVisible = false;
+                                          });
+                                        },
+                                        tooltip: 'Close panel',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Events section
+                                Expanded(child: _buildEventsSection()),
+                              ],
                             ),
                           ),
-                        );
-                      }
-                    },
-                    iconSize: iconSize,
-                    fontSize: buttonFontSize,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildAppBarButton(
-                    icon: Icons.group_add_outlined,
-                    label: 'Join',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              ShareSetupScreen(isFirstTime: false),
                         ),
-                      );
-                    },
-                    iconSize: iconSize,
-                    fontSize: buttonFontSize,
-                  ),
-                ],
-              )
-            : Text(widget.title),
-        leading: isLargeScreen
-            ? null
-            : PopupMenuButton<String>(
-                icon: Icon(Icons.more_horiz),
-                onSelected: (value) async {
-                  if (value == 'share') {
-                    final prefs = await SharedPreferences.getInstance();
-                    final shareCode = prefs.getString('shareCode');
-                    if (shareCode != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ShareScreen(
-                            shareCode:
-                                shareCode, // This is passed to ShareScreen widget
-                            isFirstTimeUser: false, // Explicitly set to false
-                          ),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'No share code found. Please setup sharing first.',
-                          ),
-                        ),
-                      );
-                    }
-                  } else if (value == 'settings') {
-                    await _navigateToSettings();
+                      ],
+                    );
+                  }
+                  // For mobile, use stacked layout
+                  else {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCalendarSection(),
+                        const SizedBox(height: 8.0),
+                        Expanded(child: _buildEventsSection()),
+                      ],
+                    );
                   }
                 },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem<String>(
-                    value: 'settings',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.settings_outlined,
-                          color: _themeColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text('Settings'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'share',
-                    child: Row(
-                      children: [
-                        Icon(Icons.share_outlined,
-                            color: _themeColor, size: 20),
-                        const SizedBox(width: 12),
-                        const Text('Share Calendar'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'setup',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.group_add_outlined,
-                          color: _themeColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text('Create/Join Calendar'),
-                      ],
-                    ),
-                    onTap: () {
-                      Future.delayed(Duration.zero, () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ShareSetupScreen(isFirstTime: false),
-                          ),
-                        );
-                      });
-                    },
-                  ),
-                ],
-              ),
-        actions: [
-          // Connection status indicator
-          if (!_isOnline)
-            Padding(
-              padding: EdgeInsets.only(right: isLargeScreen ? 16 : 8),
-              child: Icon(
-                Icons.wifi_off,
-                color: Colors.red,
-                size: isLargeScreen ? 28 : 24,
               ),
             ),
-          // Add event button - larger for tablet
-          Padding(
-            padding: EdgeInsets.only(right: isLargeScreen ? 16 : 8),
-            child: isLargeScreen
-                ? ElevatedButton.icon(
-                    icon: Icon(Icons.add, size: 22),
-                    label: Text('Add Event', style: TextStyle(fontSize: 16)),
-                    onPressed: _selectedDay != null ? _showAddEventDialog : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _themeColor,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  )
-                : IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: _selectedDay != null ? _showAddEventDialog : null,
-                  ),
-          ),
-        ],
-      ),
-      body: CenteredContainer(
-        maxWidth: Responsive.width(context) > 1400 ? 1400 : double.infinity,
-        padding: EdgeInsets.symmetric(
-          horizontal: Responsive.isMobile(context) ? 8 : 16,
-          vertical: 8,
-        ),
-        // Add card-like appearance only on very large screens
-        decoration: kIsWeb && Responsive.width(context) > 1400
-            ? BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    spreadRadius: 1,
-                  ),
-                ],
-              )
-            : null,
-        child: OrientationBuilder(
-          builder: (context, orientation) {
-            final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
-
-            // For tablet and desktop, calendar takes most of the space
-            if (isLargeScreen) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Calendar section - takes 75% of screen
-                  Expanded(
-                    flex: 3,
-                    child: _buildCalendarSection(),
-                  ),
-
-                  // Vertical divider
-                  Container(
-                    width: 1,
-                    color: Colors.grey[300],
-                  ),
-
-                  // Events list section - compact 25% sidebar
-                  Expanded(
-                    flex: 1,
-                    child: _buildEventsSection(),
-                  ),
-                ],
-              );
-            }
-            // For mobile, use stacked layout
-            else {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildCalendarSection(),
-                  const SizedBox(height: 8.0),
-                  Expanded(
-                    child: _buildEventsSection(),
-                  ),
-                ],
-              );
-            }
-          },
-        ),
-      ),
           ),
           // Screensaver overlay
           if (_isScreensaverActive)
@@ -2060,69 +2202,99 @@ class _MyHomePageState extends State<MyHomePage> {
                 duration: const Duration(milliseconds: 500),
                 child: Container(
                   color: Colors.black,
-                  child: _screensaverImageUrl.isNotEmpty
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            // Background image
-                            Image.network(
-                              _screensaverImageUrl,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white.withOpacity(0.6),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return _buildDefaultScreensaver();
-                              },
-                            ),
-                            // Semi-transparent overlay for "tap to wake" hint
-                            Container(
-                              color: Colors.black.withOpacity(0.3),
-                              child: Center(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 16,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.touch_app_outlined,
-                                        size: 32,
-                                        color: Colors.white.withOpacity(0.8),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        'Tap to wake',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.8),
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        )
-                      : _buildDefaultScreensaver(),
+                  child: _buildScreensaverContent(),
                 ),
               ),
             ),
         ],
       ),
+    );
+  }
+
+  // Helper method to build screensaver content based on mode
+  Widget _buildScreensaverContent() {
+    // Check if using slideshow mode with folder/multiple images
+    if (_useImageFolder && _currentSlideshowImage.isNotEmpty) {
+      return _buildImageScreensaver(_currentSlideshowImage);
+    }
+    // Check if using single image mode
+    if (!_useImageFolder && _screensaverImageUrl.isNotEmpty) {
+      return _buildImageScreensaver(_screensaverImageUrl);
+    }
+    // Default screensaver (no image)
+    return _buildDefaultScreensaver();
+  }
+
+  // Helper method to build screensaver with image
+  Widget _buildImageScreensaver(String imageUrl) {
+    // Determine if this is a local file path or network URL
+    final isNetworkImage = imageUrl.startsWith('http');
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Background image with fade transition for slideshow
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 800),
+          child: isNetworkImage
+              ? Image.network(
+                  imageUrl,
+                  key: ValueKey(imageUrl),
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildDefaultScreensaver();
+                  },
+                )
+              : Image.file(
+                  File(imageUrl),
+                  key: ValueKey(imageUrl),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildDefaultScreensaver();
+                  },
+                ),
+        ),
+        // Semi-transparent overlay for "tap to wake" hint
+        Container(
+          color: Colors.black.withOpacity(0.3),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.touch_app_outlined,
+                    size: 32,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Tap to wake',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -2156,12 +2328,15 @@ class _MyHomePageState extends State<MyHomePage> {
   // Helper method to build the calendar section
   Widget _buildCalendarSection() {
     // Responsive values for tablet/desktop
-    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final isLargeScreen =
+        Responsive.isDesktop(context) || Responsive.isTablet(context);
 
     // Calculate row height based on available screen height for tablet
     final screenHeight = Responsive.height(context);
     final availableHeight = screenHeight - 150; // Subtract header and padding
-    final calculatedRowHeight = isLargeScreen ? (availableHeight / 6.5) : 65.0; // 6 rows + header
+    final calculatedRowHeight = isLargeScreen
+        ? (availableHeight / 6.5)
+        : 65.0; // 6 rows + header
     final rowHeight = calculatedRowHeight.clamp(80.0, 120.0); // Min 80, max 120
 
     final fontSize = isLargeScreen ? 22.0 : 14.0;
@@ -2203,151 +2378,216 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           },
           child: TableCalendar(
-          firstDay: DateTime.utc(2010, 10, 16),
-          lastDay: DateTime.utc(2050, 3, 14),
-          focusedDay: _focusedDay,
-          calendarFormat: _calendarFormat,
-          startingDayOfWeek: StartingDayOfWeek.monday,
-          // Calendar styling
-          calendarStyle: CalendarStyle(
-            outsideDaysVisible: false,
-            // Selection circle
-            selectedDecoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _themeColor,
+            firstDay: DateTime.utc(2010, 10, 16),
+            lastDay: DateTime.utc(2050, 3, 14),
+            focusedDay: _focusedDay,
+            calendarFormat: _calendarFormat,
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            // Calendar styling
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              // Selection circle
+              selectedDecoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _themeColor,
+              ),
+              // Today highlight - more visible
+              todayDecoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _themeColor.withOpacity(0.3),
+                border: Border.all(color: _themeColor, width: 2),
+              ),
+              //The highlight box decoration using Cell Margin to adjust the position and size
+              cellPadding: EdgeInsets.zero,
+              cellMargin: EdgeInsets.only(
+                left: 8,
+                top: 2,
+                right: 8,
+                bottom: cellBottomMargin,
+              ),
+              // Cell styling
+              cellAlignment: Alignment.topCenter,
+              // Table borders
+              tableBorder: TableBorder.all(
+                color: Colors.grey[200]!,
+                width: 1,
+                borderRadius: BorderRadius.circular(0),
+              ),
+              // Marker styling
+              markersAutoAligned: false,
+              markerSize: 6,
+              markerMargin: EdgeInsets.only(top: 1),
+              //Text styling
+              defaultTextStyle: TextStyle(
+                color: Color(0xFF5A5A5A),
+                fontSize: fontSize,
+              ),
+              // Weekend dates - same size as weekday
+              weekendTextStyle: TextStyle(
+                color: Color(0xFF5A5A5A),
+                fontSize: fontSize,
+              ),
+              selectedTextStyle: TextStyle(
+                color: Color(0xFFFFFFFF),
+                fontSize: fontSize,
+              ),
+              todayTextStyle: TextStyle(
+                color: Color(0xFF170909),
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+              ),
+              outsideTextStyle: TextStyle(
+                color: Color(0x8CA384BA),
+                fontSize: fontSize - 1,
+              ),
             ),
-            // Today highlight - more visible
-            todayDecoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _themeColor.withOpacity(0.3),
-              border: Border.all(color: _themeColor, width: 2),
+            // Calendar configuration
+            daysOfWeekHeight: daysOfWeekHeight,
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: TextStyle(
+                fontSize: isLargeScreen ? 18.0 : 12.0,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              weekendStyle: TextStyle(
+                fontSize: isLargeScreen ? 18.0 : 12.0,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[500],
+              ),
             ),
-            //The highlight box decoration using Cell Margin to adjust the position and size
-            cellPadding: EdgeInsets.zero,
-            cellMargin: EdgeInsets.only(
-              left: 8,
-              top: 2,
-              right: 8,
-              bottom: cellBottomMargin,
+            rowHeight: rowHeight,
+            headerStyle: HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+              titleTextStyle: TextStyle(
+                fontSize: headerFontSize,
+                fontWeight: FontWeight.bold,
+              ),
+              leftChevronIcon: Icon(
+                Icons.chevron_left,
+                size: isLargeScreen ? 32 : 24,
+              ),
+              rightChevronIcon: Icon(
+                Icons.chevron_right,
+                size: isLargeScreen ? 32 : 24,
+              ),
+              headerPadding: EdgeInsets.symmetric(
+                vertical: isLargeScreen ? 16 : 8,
+              ),
             ),
-            // Cell styling
-            cellAlignment: Alignment.topCenter,
-            // Table borders
-            tableBorder: TableBorder.all(
-              color: Colors.grey[200]!,
-              width: 1,
-              borderRadius: BorderRadius.circular(0),
-            ),
-            // Marker styling
-            markersAutoAligned: false,
-            markerSize: 6,
-            markerMargin: EdgeInsets.only(top: 1),
-            //Text styling
-            defaultTextStyle: TextStyle(
-              color: Color(0xFF5A5A5A),
-              fontSize: fontSize,
-            ),
-            // Weekend dates - same size as weekday
-            weekendTextStyle: TextStyle(
-              color: Color(0xFF5A5A5A),
-              fontSize: fontSize,
-            ),
-            selectedTextStyle: TextStyle(
-              color: Color(0xFFFFFFFF),
-              fontSize: fontSize,
-            ),
-            todayTextStyle: TextStyle(
-              color: Color(0xFF170909),
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-            ),
-            outsideTextStyle: TextStyle(
-              color: Color(0x8CA384BA),
-              fontSize: fontSize - 1,
-            ),
-          ),
-          // Calendar configuration
-          daysOfWeekHeight: daysOfWeekHeight,
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: TextStyle(
-              fontSize: isLargeScreen ? 18.0 : 12.0,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-            weekendStyle: TextStyle(
-              fontSize: isLargeScreen ? 18.0 : 12.0,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[500],
-            ),
-          ),
-          rowHeight: rowHeight,
-          headerStyle: HeaderStyle(
-            formatButtonVisible: false,
-            titleCentered: true,
-            titleTextStyle: TextStyle(
-              fontSize: headerFontSize,
-              fontWeight: FontWeight.bold,
-            ),
-            leftChevronIcon: Icon(Icons.chevron_left, size: isLargeScreen ? 32 : 24),
-            rightChevronIcon: Icon(Icons.chevron_right, size: isLargeScreen ? 32 : 24),
-            headerPadding: EdgeInsets.symmetric(vertical: isLargeScreen ? 16 : 8),
-          ),
 
-          // Custom builder to show event titles
-          calendarBuilders: CalendarBuilders(
-            markerBuilder: (context, date, events) {
-              if (events.isEmpty) return Container();
-              // Cast events to your Event type
-              final eventsList = events as List<Event>;
-              return Positioned(
-                bottom: 1,
-                left: 1,
-                right: 1,
-                top: eventAreaTop,
-                child: Container(
-                  height: eventAreaHeight,
-                  child: ListView.builder(
-                    padding: EdgeInsets.zero,
-                    itemCount: eventsList.length > 3 ? 3 : eventsList.length,
-                    itemBuilder: (context, index) {
-                      final event = eventsList[index];
-                      return Container(
-                        margin: EdgeInsets.only(bottom: isLargeScreen ? 2 : 1),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isLargeScreen ? 6 : 3,
-                          vertical: isLargeScreen ? 3 : 1,
+            // Custom builder to show event titles
+            calendarBuilders: CalendarBuilders(
+              // Custom selected day builder - circle aligned with number
+              selectedBuilder: (context, date, _) {
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    width: isLargeScreen ? 36 : 28,
+                    height: isLargeScreen ? 36 : 28,
+                    margin: EdgeInsets.only(top: isLargeScreen ? 4 : 2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _themeColor,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: fontSize,
                         ),
-                        decoration: BoxDecoration(
-                          color: event.color?.withOpacity(0.75) ??
-                              Colors.blue.withOpacity(0.35),
-                          borderRadius: BorderRadius.circular(isLargeScreen ? 6 : 4),
-                        ),
-                        child: Text(
-                          event.title,
-                          style: TextStyle(
-                            fontSize: eventFontSize,
-                            fontWeight: isLargeScreen ? FontWeight.w500 : FontWeight.normal,
-                            color: Colors.black87,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+              // Custom today builder - circle aligned with number
+              todayBuilder: (context, date, _) {
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    width: isLargeScreen ? 36 : 40,
+                    height: isLargeScreen ? 36 : 40,
+                    margin: EdgeInsets.only(top: isLargeScreen ? 4 : 2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _themeColor.withOpacity(0.3),
+                      border: Border.all(color: _themeColor, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          color: Color(0xFF170909),
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              markerBuilder: (context, date, events) {
+                if (events.isEmpty) return Container();
+                // Cast events to your Event type
+                final eventsList = events as List<Event>;
+                return Positioned(
+                  bottom: 1,
+                  left: 1,
+                  right: 1,
+                  top: eventAreaTop,
+                  child: Container(
+                    height: eventAreaHeight,
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: eventsList.length > 3 ? 3 : eventsList.length,
+                      itemBuilder: (context, index) {
+                        final event = eventsList[index];
+                        return Container(
+                          margin: EdgeInsets.only(
+                            bottom: isLargeScreen ? 2 : 1,
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isLargeScreen ? 6 : 3,
+                            vertical: isLargeScreen ? 3 : 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                event.color?.withOpacity(0.75) ??
+                                Colors.blue.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(
+                              isLargeScreen ? 6 : 4,
+                            ),
+                          ),
+                          child: Text(
+                            event.title,
+                            style: TextStyle(
+                              fontSize: eventFontSize,
+                              fontWeight: isLargeScreen
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                              color: Colors.black87,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
 
-          // Event handling
-          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          onPageChanged: (focusedDay) {
-            _focusedDay = focusedDay;
-            _fetchEventsForVisibleMonth(focusedDay);
-          },
-          eventLoader: (day) => _getEventsForDay(day),
-          onDaySelected: _onDaySelected,
+            // Event handling
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onPageChanged: (focusedDay) {
+              _focusedDay = focusedDay;
+              _fetchEventsForVisibleMonth(focusedDay);
+            },
+            eventLoader: (day) => _getEventsForDay(day),
+            onDaySelected: _onDaySelected,
           ),
         ),
       ],
@@ -2356,7 +2596,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Helper method to build the events section
   Widget _buildEventsSection() {
-    final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final isLargeScreen =
+        Responsive.isDesktop(context) || Responsive.isTablet(context);
     final titleFontSize = isLargeScreen ? 22.0 : 18.0;
     final eventTitleFontSize = isLargeScreen ? 18.0 : 16.0;
     final deviceFontSize = isLargeScreen ? 14.0 : 12.0;
@@ -2366,11 +2607,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (_selectedDay == null) {
       return Center(
-        child: Text('Select a day to view events',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: isLargeScreen ? 18 : 14,
-            )),
+        child: Text(
+          'Select a day to view events',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: isLargeScreen ? 18 : 14,
+          ),
+        ),
       );
     }
 
@@ -2380,11 +2623,15 @@ class _MyHomePageState extends State<MyHomePage> {
           padding: EdgeInsets.all(isLargeScreen ? 16.0 : 8.0),
           child: Text(
             DateFormat('EEEE, d MMM').format(_selectedDay!),
-            style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: titleFontSize,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         Expanded(
-          child: _events[dateText(_selectedDay!)] == null ||
+          child:
+              _events[dateText(_selectedDay!)] == null ||
                   _events[dateText(_selectedDay!)]!.isEmpty
               ? Center(
                   child: Column(
@@ -2445,139 +2692,143 @@ class _MyHomePageState extends State<MyHomePage> {
 
                     // Build the card widget
                     final cardWidget = Card(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: isLargeScreen ? 12 : 16,
-                          vertical: isLargeScreen ? 10 : 6,
+                      margin: EdgeInsets.symmetric(
+                        horizontal: isLargeScreen ? 12 : 16,
+                        vertical: isLargeScreen ? 10 : 6,
+                      ),
+                      elevation: isLargeScreen ? 2 : 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: eventColor.withOpacity(0.3),
+                          width: 1,
                         ),
-                        elevation: isLargeScreen ? 2 : 1,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: eventColor.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          splashFactory: InkRipple.splashFactory,
-                          splashColor: eventColor.withOpacity(0.3),
-                          highlightColor: eventColor.withOpacity(0.1),
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            _showEventDetails(event);
-                          },
-                          onLongPress: (_isKioskEnabled && _hideDeleteEdit) ? null : () {
-                            HapticFeedback.mediumImpact();
-                            _showEditEventDialog(event);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              gradient: LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  eventColor.withOpacity(0.2),
-                                  Colors.white,
-                                ],
-                                stops: const [0.02, 0.1],
-                              ),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        splashFactory: InkRipple.splashFactory,
+                        splashColor: eventColor.withOpacity(0.3),
+                        highlightColor: eventColor.withOpacity(0.1),
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _showEventDetails(event);
+                        },
+                        onLongPress: (_isKioskEnabled && _hideDeleteEdit)
+                            ? null
+                            : () {
+                                HapticFeedback.mediumImpact();
+                                _showEditEventDialog(event);
+                              },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                eventColor.withOpacity(0.2),
+                                Colors.white,
+                              ],
+                              stops: const [0.02, 0.1],
                             ),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: cardPadding,
-                                horizontal: cardPadding + 4,
-                              ),
-                              child: Row(
-                                children: [
-                                  // Left colored indicator
-                                  Container(
-                                    width: isLargeScreen ? 5 : 4,
-                                    height: isLargeScreen ? 70 : 55,
-                                    decoration: BoxDecoration(
-                                      color: eventColor,
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: cardPadding,
+                              horizontal: cardPadding + 4,
+                            ),
+                            child: Row(
+                              children: [
+                                // Left colored indicator
+                                Container(
+                                  width: isLargeScreen ? 5 : 4,
+                                  height: isLargeScreen ? 70 : 55,
+                                  decoration: BoxDecoration(
+                                    color: eventColor,
+                                    borderRadius: BorderRadius.circular(3),
                                   ),
-                                  SizedBox(width: isLargeScreen ? 20 : 16),
-                                  // Content
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Time display
-                                        if (event.timeString.isNotEmpty)
-                                          Padding(
-                                            padding: EdgeInsets.only(bottom: 4),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.access_time,
-                                                  size: isLargeScreen ? 16 : 14,
-                                                  color: _themeColor,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  event.timeString,
-                                                  style: TextStyle(
-                                                    fontSize: isLargeScreen ? 14 : 12,
-                                                    color: _themeColor,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        Text(
-                                          event.title,
-                                          style: TextStyle(
-                                            fontSize: eventTitleFontSize,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        if (eventData.fingerprint != null)
-                                          Row(
+                                ),
+                                SizedBox(width: isLargeScreen ? 20 : 16),
+                                // Content
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Time display
+                                      if (event.timeString.isNotEmpty)
+                                        Padding(
+                                          padding: EdgeInsets.only(bottom: 4),
+                                          child: Row(
                                             children: [
                                               Icon(
-                                                Icons.person_outline,
-                                                size: deviceFontSize + 2,
-                                                color: Colors.grey[600],
+                                                Icons.access_time,
+                                                size: isLargeScreen ? 16 : 14,
+                                                color: _themeColor,
                                               ),
                                               const SizedBox(width: 4),
-                                              Expanded(
-                                                child: Text(
-                                                  event.deviceName ??
-                                                      "Device ${event.fingerprint!.substring(0, 6)}",
-                                                  style: TextStyle(
-                                                    fontSize: deviceFontSize,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
+                                              Text(
+                                                event.timeString,
+                                                style: TextStyle(
+                                                  fontSize: isLargeScreen
+                                                      ? 14
+                                                      : 12,
+                                                  color: _themeColor,
+                                                  fontWeight: FontWeight.w500,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                      ],
-                                    ),
+                                        ),
+                                      Text(
+                                        event.title,
+                                        style: TextStyle(
+                                          fontSize: eventTitleFontSize,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      if (eventData.fingerprint != null)
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.person_outline,
+                                              size: deviceFontSize + 2,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                event.deviceName ??
+                                                    "Device ${event.fingerprint!.substring(0, 6)}",
+                                                style: TextStyle(
+                                                  fontSize: deviceFontSize,
+                                                  color: Colors.grey[600],
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                    ],
                                   ),
-                                  // Swipe hint icon
-                                  // Only show swipe hint when delete is enabled
-                                  if (!(_isKioskEnabled && _hideDeleteEdit))
-                                    Icon(
-                                      Icons.chevron_left,
-                                      color: Colors.grey[300],
-                                      size: isLargeScreen ? 24 : 20,
-                                    ),
-                                ],
-                              ),
+                                ),
+                                // Swipe hint icon
+                                // Only show swipe hint when delete is enabled
+                                if (!(_isKioskEnabled && _hideDeleteEdit))
+                                  Icon(
+                                    Icons.chevron_left,
+                                    color: Colors.grey[300],
+                                    size: isLargeScreen ? 24 : 20,
+                                  ),
+                              ],
                             ),
                           ),
                         ),
+                      ),
                     );
 
                     // Wrap with Dismissible only if delete/edit is not hidden
@@ -2610,16 +2861,25 @@ class _MyHomePageState extends State<MyHomePage> {
                           context: context,
                           builder: (context) => AlertDialog(
                             title: Text('Delete Event'),
-                            content: Text('Are you sure you want to delete "${event.title}"?'),
+                            content: Text(
+                              'Are you sure you want to delete "${event.title}"?',
+                            ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
                                 child: Text('Cancel'),
                               ),
                               ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                child: Text('Delete', style: TextStyle(color: Colors.white)),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(true),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                ),
+                                child: Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.white),
+                                ),
                               ),
                             ],
                           ),
