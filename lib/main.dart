@@ -199,6 +199,9 @@ class _MyHomePageState extends State<MyHomePage> {
   static const String _lastSyncTimestampKey = 'last_sync_timestamp';
   bool _isFirstLoad = true;
 
+  // Events panel visibility (for tablet/desktop sliding panel)
+  bool _isEventsPanelVisible = false;
+
   // Kiosk mode state
   final KioskService _kioskService = KioskService();
   bool _isKioskEnabled = false;
@@ -271,6 +274,11 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
+      // Show the events panel on tablet/desktop when a day is selected
+      final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+      if (isLargeScreen) {
+        _isEventsPanelVisible = true;
+      }
     });
     await _fetchEventsFromFirestore(_selectedDay!);
   }
@@ -2109,19 +2117,65 @@ class _MyHomePageState extends State<MyHomePage> {
                       Responsive.isDesktop(context) ||
                       Responsive.isTablet(context);
 
-                  // For tablet and desktop, calendar takes most of the space
+                  // For tablet and desktop, calendar is full width with sliding events panel
                   if (isLargeScreen) {
+                    final panelWidth = MediaQuery.of(context).size.width * 0.3;
                     return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Calendar section - takes 75% of screen
-                        Expanded(flex: 3, child: _buildCalendarSection()),
+                        // Calendar section - expands to fill available space
+                        Expanded(
+                          child: _buildCalendarSection(),
+                        ),
 
-                        // Vertical divider
-                        Container(width: 1, color: Colors.grey[300]),
-
-                        // Events list section - compact 25% sidebar
-                        Expanded(flex: 1, child: _buildEventsSection()),
+                        // Sliding events panel from right
+                        AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          width: _isEventsPanelVisible ? panelWidth : 0,
+                          child: ClipRect(
+                            child: OverflowBox(
+                              alignment: Alignment.centerLeft,
+                              maxWidth: panelWidth,
+                              child: Container(
+                                width: panelWidth,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 10,
+                                      offset: Offset(-2, 0),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    // Close button header
+                                    Container(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.close, size: 24),
+                                            onPressed: () {
+                                              setState(() {
+                                                _isEventsPanelVisible = false;
+                                              });
+                                            },
+                                            tooltip: 'Close panel',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Events section
+                                    Expanded(child: _buildEventsSection()),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     );
                   }
