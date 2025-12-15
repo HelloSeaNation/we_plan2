@@ -37,8 +37,12 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _screensaverEnabled = false;
   int _screensaverTimeout = KioskService.defaultScreensaverTimeout;
   final TextEditingController _screensaverImageUrlController = TextEditingController();
+  final TextEditingController _screensaverFolderPathController = TextEditingController();
+  bool _useFolder = false;
+  int _rotationInterval = KioskService.defaultRotationInterval;
 
   final List<int> _timeoutOptions = [1, 2, 5, 10, 15, 30];
+  final List<int> _rotationOptions = [5, 10, 15, 30, 60]; // seconds
 
   final List<Color> _colorOptions = [
     Colors.orange,
@@ -70,6 +74,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _screensaverEnabled = kioskService.screensaverEnabled;
       _screensaverTimeout = kioskService.screensaverTimeoutMinutes;
       _screensaverImageUrlController.text = kioskService.screensaverImageUrl;
+      _screensaverFolderPathController.text = kioskService.screensaverFolderPath;
+      _useFolder = kioskService.useFolder;
+      _rotationInterval = kioskService.rotationIntervalSeconds;
     });
   }
 
@@ -77,6 +84,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _nameController.dispose();
     _screensaverImageUrlController.dispose();
+    _screensaverFolderPathController.dispose();
     super.dispose();
   }
 
@@ -115,6 +123,9 @@ class _SettingsPageState extends State<SettingsPage> {
         screensaverEnabled: _screensaverEnabled,
         screensaverTimeoutMinutes: _screensaverTimeout,
         screensaverImageUrl: _screensaverImageUrlController.text.trim(),
+        screensaverFolderPath: _screensaverFolderPathController.text.trim(),
+        rotationIntervalSeconds: _rotationInterval,
+        useFolder: _useFolder,
       );
     }
 
@@ -741,10 +752,11 @@ class _SettingsPageState extends State<SettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Toggle for single image vs multiple images
             Row(
               children: [
                 Icon(
-                  Icons.image_outlined,
+                  _useFolder ? Icons.photo_library_outlined : Icons.image_outlined,
                   color: _selectedColor,
                   size: isLargeScreen ? 28 : 24,
                 ),
@@ -754,7 +766,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Screensaver Image',
+                        'Screensaver Images',
                         style: TextStyle(
                           fontSize: isLargeScreen ? 16 : 14,
                           fontWeight: FontWeight.w600,
@@ -762,7 +774,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Enter image URL (leave empty for default)',
+                        _useFolder
+                            ? 'Multiple images will rotate automatically'
+                            : 'Single image display',
                         style: TextStyle(
                           fontSize: isLargeScreen ? 13 : 12,
                           color: Colors.grey[600],
@@ -774,76 +788,297 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _screensaverImageUrlController,
-              decoration: InputDecoration(
-                hintText: 'https://example.com/image.jpg',
-                hintStyle: TextStyle(
-                  color: Colors.grey[400],
-                  fontSize: isLargeScreen ? 14 : 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: _selectedColor, width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: isLargeScreen ? 14 : 10,
-                ),
-                prefixIcon: Icon(Icons.link, color: Colors.grey[400]),
-              ),
-              style: TextStyle(fontSize: isLargeScreen ? 14 : 12),
-              keyboardType: TextInputType.url,
-            ),
-            // Preview image if URL is provided
-            if (_screensaverImageUrlController.text.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
+
+            // Toggle buttons for single/multiple images
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  height: 120,
-                  width: double.infinity,
-                  color: Colors.grey[200],
-                  child: Image.network(
-                    _screensaverImageUrlController.text,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                          color: _selectedColor,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _useFolder = false);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          vertical: isLargeScreen ? 12 : 10,
                         ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Column(
+                        decoration: BoxDecoration(
+                          color: !_useFolder ? _selectedColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.broken_image, color: Colors.grey[400], size: 32),
-                            const SizedBox(height: 4),
+                            Icon(
+                              Icons.image_outlined,
+                              size: isLargeScreen ? 20 : 18,
+                              color: !_useFolder ? Colors.white : Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
                             Text(
-                              'Invalid image URL',
-                              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                              'Single Image',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 14 : 12,
+                                fontWeight: FontWeight.w600,
+                                color: !_useFolder ? Colors.white : Colors.grey[600],
+                              ),
                             ),
                           ],
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _useFolder = true);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          vertical: isLargeScreen ? 12 : 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _useFolder ? _selectedColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.photo_library_outlined,
+                              size: isLargeScreen ? 20 : 18,
+                              color: _useFolder ? Colors.white : Colors.grey[600],
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Slideshow',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 14 : 12,
+                                fontWeight: FontWeight.w600,
+                                color: _useFolder ? Colors.white : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Single image URL input
+            if (!_useFolder) ...[
+              Text(
+                'Image URL',
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 13 : 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _screensaverImageUrlController,
+                decoration: InputDecoration(
+                  hintText: 'https://example.com/image.jpg',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: isLargeScreen ? 14 : 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: _selectedColor, width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: isLargeScreen ? 14 : 10,
+                  ),
+                  prefixIcon: Icon(Icons.link, color: Colors.grey[400]),
+                ),
+                style: TextStyle(fontSize: isLargeScreen ? 14 : 12),
+                keyboardType: TextInputType.url,
+              ),
+              // Preview image if URL is provided
+              if (_screensaverImageUrlController.text.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    color: Colors.grey[200],
+                    child: Image.network(
+                      _screensaverImageUrlController.text,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: _selectedColor,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.broken_image, color: Colors.grey[400], size: 32),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Invalid image URL',
+                                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
+              ],
+            ],
+
+            // Multiple images / folder path input
+            if (_useFolder) ...[
+              Text(
+                'Image URLs (comma-separated) or folder path',
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 13 : 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _screensaverFolderPathController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'https://example.com/img1.jpg, https://example.com/img2.jpg\nor /path/to/images/folder',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: isLargeScreen ? 14 : 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: _selectedColor, width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: isLargeScreen ? 14 : 10,
+                  ),
+                  prefixIcon: Padding(
+                    padding: const EdgeInsets.only(bottom: 40),
+                    child: Icon(Icons.folder_outlined, color: Colors.grey[400]),
+                  ),
+                ),
+                style: TextStyle(fontSize: isLargeScreen ? 14 : 12),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue[700], size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'For web: Enter comma-separated image URLs\nFor Raspberry Pi: Enter local folder path (e.g., /home/pi/images)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Rotation interval selector
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(
+                    Icons.rotate_right,
+                    color: _selectedColor,
+                    size: isLargeScreen ? 24 : 20,
+                  ),
+                  SizedBox(width: isLargeScreen ? 12 : 8),
+                  Expanded(
+                    child: Text(
+                      'Rotation interval',
+                      style: TextStyle(
+                        fontSize: isLargeScreen ? 14 : 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isLargeScreen ? 12 : 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _selectedColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: DropdownButton<int>(
+                      value: _rotationInterval,
+                      underline: const SizedBox(),
+                      icon: Icon(Icons.arrow_drop_down, color: _selectedColor),
+                      style: TextStyle(
+                        color: _selectedColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: isLargeScreen ? 15 : 14,
+                      ),
+                      items: _rotationOptions.map((seconds) {
+                        return DropdownMenuItem<int>(
+                          value: seconds,
+                          child: Text('$seconds sec'),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        if (newValue != null) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _rotationInterval = newValue);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ],
