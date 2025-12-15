@@ -275,7 +275,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _selectedDay = selectedDay;
       _focusedDay = focusedDay;
       // Show the events panel on tablet/desktop when a day is selected
-      final isLargeScreen = Responsive.isDesktop(context) || Responsive.isTablet(context);
+      final isLargeScreen =
+          Responsive.isDesktop(context) || Responsive.isTablet(context);
       if (isLargeScreen) {
         _isEventsPanelVisible = true;
       }
@@ -1884,7 +1885,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           Scaffold(
             appBar: AppBar(
-              toolbarHeight: isLargeScreen ? 64 : 56,
+              toolbarHeight: isLargeScreen ? 48 : 56,
               title: isLargeScreen
                   ? Row(
                       children: [
@@ -2090,6 +2091,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
             body: CenteredContainer(
+              alignment: Alignment.topCenter,
               maxWidth: Responsive.width(context) > 1400
                   ? 1400
                   : double.infinity,
@@ -2101,7 +2103,6 @@ class _MyHomePageState extends State<MyHomePage> {
               decoration: kIsWeb && Responsive.width(context) > 1400
                   ? BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -2121,11 +2122,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (isLargeScreen) {
                     final panelWidth = MediaQuery.of(context).size.width * 0.3;
                     return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Calendar section - expands to fill available space
-                        Expanded(
-                          child: _buildCalendarSection(),
-                        ),
+                        Expanded(child: _buildCalendarSection()),
 
                         // Sliding events panel from right
                         AnimatedContainer(
@@ -2152,9 +2152,13 @@ class _MyHomePageState extends State<MyHomePage> {
                                   children: [
                                     // Close button header
                                     Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
                                         children: [
                                           IconButton(
                                             icon: Icon(Icons.close, size: 24),
@@ -2339,16 +2343,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Calculate row height based on available screen height for tablet
     final screenHeight = Responsive.height(context);
-    final availableHeight = screenHeight - 150; // Subtract header and padding
+    final availableHeight = screenHeight - 50; // Subtract header and padding
     final calculatedRowHeight = isLargeScreen
-        ? (availableHeight / 6.5)
+        ? (availableHeight / 7.5)
         : 65.0; // 6 rows + header
-    final rowHeight = calculatedRowHeight.clamp(80.0, 120.0); // Min 80, max 120
+    final rowHeight = calculatedRowHeight.clamp(80.0, 140.0); // Min 60, max 120
 
     final fontSize = isLargeScreen ? 22.0 : 14.0;
     final eventFontSize = isLargeScreen ? 16.0 : 9.0;
     final headerFontSize = isLargeScreen ? 26.0 : 16.0;
-    final daysOfWeekHeight = isLargeScreen ? 50.0 : 32.0;
+    final daysOfWeekHeight = isLargeScreen ? 40.0 : 32.0;
     final cellBottomMargin = isLargeScreen ? (rowHeight - 30) : 41.0;
     final eventAreaTop = isLargeScreen ? 32.0 : 25.0;
     final eventAreaHeight = isLargeScreen ? (rowHeight - 38) : 32.0;
@@ -2478,7 +2482,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 size: isLargeScreen ? 32 : 24,
               ),
               headerPadding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 16 : 8,
+                vertical: isLargeScreen ? 4 : 8,
               ),
             ),
 
