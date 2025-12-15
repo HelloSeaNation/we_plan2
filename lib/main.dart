@@ -2383,11 +2383,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Calculate row height based on available screen height for tablet
     final screenHeight = Responsive.height(context);
-    final availableHeight = screenHeight - 50; // Subtract header and padding
+    // Subtract: AppBar (~56) + top padding (20) + header row (~50) + days of week row (~40)
+    final availableHeight = screenHeight - 166;
     final calculatedRowHeight = isLargeScreen
-        ? (availableHeight / 7.5)
-        : 65.0; // 6 rows + header
-    final rowHeight = calculatedRowHeight.clamp(80.0, 140.0); // Min 60, max 120
+        ? (availableHeight / 6) // 6 rows of weeks to fill screen
+        : 105.0;
+    final rowHeight = calculatedRowHeight; // No clamp - let it fill the screen
 
     final fontSize = isLargeScreen ? 22.0 : 14.0;
     final eventFontSize = isLargeScreen ? 16.0 : 9.0;
@@ -2620,7 +2621,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               color: Colors.black87,
                             ),
                             overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
+                            maxLines: 3,
                           ),
                         );
                       },
