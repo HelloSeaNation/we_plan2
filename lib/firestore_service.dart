@@ -254,6 +254,11 @@ class FirestoreService {
           .collection(_sharedCollectionId!)
           .where("date", isGreaterThanOrEqualTo: start.toIso8601String())
           .where("date", isLessThanOrEqualTo: end.toIso8601String())
+          .withConverter<Map<String, dynamic>>(
+            fromFirestore: (snapshot, _) =>
+                snapshot.data()!..['id'] = snapshot.id,
+            toFirestore: (data, _) => data,
+          )
           .get();
 
       return snapshot.docs.map((doc) => doc.data()).toList();

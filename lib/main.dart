@@ -1544,13 +1544,105 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _fetchEventsForVisibleMonth(DateTime focusedDay) async {
     final startDay = DateTime.utc(focusedDay.year, focusedDay.month, 1);
     final endDay = DateTime.utc(focusedDay.year, focusedDay.month + 1, 0);
+    final eventsBox = Hive.box<CachedEvent>('events');
 
-    for (
-      var day = startDay;
-      !day.isAfter(endDay); //
-      day = day.add(const Duration(days: 1))
-    ) {
-      await _fetchEventsFromFirestore(day);
+    // Step 1: Load from local cache first (instant UI update)
+    final Map<String, List<Event>> cachedEventsMap = {};
+    for (var day = startDay; !day.isAfter(endDay); day = day.add(const Duration(days: 1))) {
+      final dayKey = dateText(day);
+      final cachedEvents = eventsBox.values
+          .where((e) => e.date == dayKey)
+          .map((e) => Event(
+                id: e.id,
+                title: e.title,
+                description: e.description,
+                fingerprint: e.fingerprint,
+                deviceName: e.deviceName,
+                color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
+                startTime: e.startTimeHour != null && e.startTimeMinute != null
+                    ? TimeOfDay(hour: e.startTimeHour!, minute: e.startTimeMinute!)
+                    : null,
+                endTime: e.endTimeHour != null && e.endTimeMinute != null
+                    ? TimeOfDay(hour: e.endTimeHour!, minute: e.endTimeMinute!)
+                    : null,
+              ))
+          .toList();
+      if (cachedEvents.isNotEmpty) {
+        cachedEventsMap[dayKey] = cachedEvents;
+      }
+    }
+
+    // Update UI with cached data immediately
+    if (cachedEventsMap.isNotEmpty) {
+      setState(() {
+        _events.addAll(cachedEventsMap);
+      });
+    }
+
+    // Step 2: If offline, we're done
+    if (!_isOnline) return;
+
+    // Step 3: Fetch from Firestore using single range query
+    try {
+      final eventsData = await FirestoreService.getEventsForRange(startDay, endDay);
+      final Map<String, List<Event>> fetchedEventsMap = {};
+
+      for (var data in eventsData) {
+        final dateStr = data['date'] as String;
+        final eventDate = DateTime.parse(dateStr);
+        final dayKey = dateText(eventDate);
+
+        final event = Event(
+          id: data['id'],
+          title: data['title'],
+          description: data['description'],
+          fingerprint: data['fingerprint'],
+          deviceName: data['device_name'],
+          color: data['color_value'] != null ? Color(data['color_value']) : Colors.blue,
+          startTime: data['start_time_hour'] != null && data['start_time_minute'] != null
+              ? TimeOfDay(hour: data['start_time_hour'], minute: data['start_time_minute'])
+              : null,
+          endTime: data['end_time_hour'] != null && data['end_time_minute'] != null
+              ? TimeOfDay(hour: data['end_time_hour'], minute: data['end_time_minute'])
+              : null,
+        );
+
+        fetchedEventsMap.putIfAbsent(dayKey, () => []).add(event);
+
+        // Update local cache
+        final cached = CachedEvent(
+          id: data['id'],
+          title: data['title'],
+          description: data['description'],
+          date: dayKey,
+          fingerprint: data['fingerprint'],
+          deviceName: data['device_name'],
+          colorValue: data['color_value'],
+          startTimeHour: data['start_time_hour'],
+          startTimeMinute: data['start_time_minute'],
+          endTimeHour: data['end_time_hour'],
+          endTimeMinute: data['end_time_minute'],
+        );
+        await eventsBox.put(data['id'], cached);
+      }
+
+      // Update UI with fresh data from Firestore
+      setState(() {
+        // Clear old events for this month range and add fresh ones
+        for (var day = startDay; !day.isAfter(endDay); day = day.add(const Duration(days: 1))) {
+          final dayKey = dateText(day);
+          if (fetchedEventsMap.containsKey(dayKey)) {
+            _events[dayKey] = fetchedEventsMap[dayKey]!;
+          } else {
+            _events.remove(dayKey);
+          }
+        }
+      });
+
+      await _saveEventsToCache();
+      await _updateWidgetWithLatestEvents();
+    } catch (e) {
+      debugPrint("Error fetching events for month: $e");
     }
   }
 
@@ -2240,98 +2332,46 @@ class _MyHomePageState extends State<MyHomePage> {
     // Determine if this is a local file path or network URL
     final isNetworkImage = imageUrl.startsWith('http');
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Background image with fade transition for slideshow
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 800),
-          child: isNetworkImage
-              ? Image.network(
-                  imageUrl,
-                  key: ValueKey(imageUrl),
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.white.withOpacity(0.6),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildDefaultScreensaver();
-                  },
-                )
-              : Image.file(
-                  File(imageUrl),
-                  key: ValueKey(imageUrl),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildDefaultScreensaver();
-                  },
-                ),
-        ),
-        // Semi-transparent overlay for "tap to wake" hint
-        Container(
-          color: Colors.black.withOpacity(0.3),
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.touch_app_outlined,
-                    size: 32,
-                    color: Colors.white.withOpacity(0.8),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 800),
+      child: isNetworkImage
+          ? Image.network(
+              imageUrl,
+              key: ValueKey(imageUrl),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.white.withOpacity(0.6),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Tap to wake',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return _buildDefaultScreensaver();
+              },
+            )
+          : Image.file(
+              File(imageUrl),
+              key: ValueKey(imageUrl),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildDefaultScreensaver();
+              },
             ),
-          ),
-        ),
-      ],
     );
   }
 
   // Helper method to build default screensaver (no image)
   Widget _buildDefaultScreensaver() {
     return Container(
-      color: Colors.black.withOpacity(0.7),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.touch_app_outlined,
-              size: 64,
-              color: Colors.white.withOpacity(0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Tap to wake',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.6),
-                fontSize: 18,
-              ),
-            ),
-          ],
-        ),
-      ),
+      color: Colors.black,
+      width: double.infinity,
+      height: double.infinity,
     );
   }
 
