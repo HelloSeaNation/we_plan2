@@ -25,6 +25,7 @@ import 'package:flutter/foundation.dart';
 import 'utils/responsive.dart';
 import 'widgets/responsive_layout.dart';
 import 'widgets/centered_container.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 String dateText(DateTime date) {
   return normalizeDate(date).toString();
@@ -210,6 +211,9 @@ class _MyHomePageState extends State<MyHomePage> {
   String _screensaverImageUrl = '';
   bool _useImageFolder = false;
   String _currentSlideshowImage = '';
+  bool _useDakboard = false;
+  String _dakboardUrl = '';
+  WebViewController? _webViewController;
 
   @override
   void dispose() {
@@ -293,7 +297,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _screensaverImageUrl = _kioskService.screensaverImageUrl;
       _useImageFolder = _kioskService.useFolder;
       _currentSlideshowImage = _kioskService.currentImagePath;
+      _useDakboard = _kioskService.useDakboard;
+      _dakboardUrl = _kioskService.dakboardUrl;
     });
+
+    // Initialize WebViewController for Dakboard if needed
+    if (_useDakboard && _dakboardUrl.isNotEmpty) {
+      _initDakboardWebView();
+    }
 
     // Register callbacks
     _kioskService.registerInactivityCallback(_onKioskInactivityTimeout);
@@ -315,6 +326,16 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _currentSlideshowImage = _kioskService.currentImagePath;
     });
+  }
+
+  // Initialize WebView controller for Dakboard
+  void _initDakboardWebView() {
+    if (_dakboardUrl.isEmpty) return;
+
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.black)
+      ..loadRequest(Uri.parse(_dakboardUrl));
   }
 
   // Called when user interacts with the app
@@ -366,7 +387,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _screensaverImageUrl = _kioskService.screensaverImageUrl;
       _useImageFolder = _kioskService.useFolder;
       _currentSlideshowImage = _kioskService.currentImagePath;
+      _useDakboard = _kioskService.useDakboard;
+      _dakboardUrl = _kioskService.dakboardUrl;
     });
+
+    // Re-initialize WebView if Dakboard settings changed
+    if (_useDakboard && _dakboardUrl.isNotEmpty) {
+      _initDakboardWebView();
+    }
 
     if (_isKioskEnabled) {
       _kioskService.startTimers();
@@ -2315,6 +2343,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Helper method to build screensaver content based on mode
   Widget _buildScreensaverContent() {
+    // Check if using Dakboard mode
+    if (_useDakboard && _dakboardUrl.isNotEmpty && _webViewController != null) {
+      return _buildDakboardScreensaver();
+    }
     // Check if using slideshow mode with folder/multiple images
     if (_useImageFolder && _currentSlideshowImage.isNotEmpty) {
       return _buildImageScreensaver(_currentSlideshowImage);
@@ -2325,6 +2357,15 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     // Default screensaver (no image)
     return _buildDefaultScreensaver();
+  }
+
+  // Helper method to build Dakboard WebView screensaver
+  Widget _buildDakboardScreensaver() {
+    return SizedBox(
+      width: double.infinity,
+      height: double.infinity,
+      child: WebViewWidget(controller: _webViewController!),
+    );
   }
 
   // Helper method to build screensaver with image
