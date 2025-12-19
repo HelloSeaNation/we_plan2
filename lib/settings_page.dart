@@ -180,13 +180,18 @@ class _SettingsPageState extends State<SettingsPage> {
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 16.0,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height,
+              minWidth: double.infinity,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (widget.isFirstTime) ...[
                   Center(
@@ -556,6 +561,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );
