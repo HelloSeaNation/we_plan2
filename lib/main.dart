@@ -26,6 +26,7 @@ import 'utils/responsive.dart';
 import 'widgets/responsive_layout.dart';
 import 'widgets/centered_container.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'widgets/dakboard_view.dart' as dakboard_view;
 
 String dateText(DateTime date) {
   return normalizeDate(date).toString();
@@ -2361,6 +2362,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Helper method to build Dakboard WebView screensaver
   Widget _buildDakboardScreensaver() {
+    // For web platform, use iframe via HtmlElementView
+    if (kIsWeb) {
+      return dakboard_view.buildDakboardIframe(_dakboardUrl);
+    }
+
+    // For mobile/desktop, use WebViewWidget
+    if (_webViewController == null) {
+      return _buildDefaultScreensaver();
+    }
+
     return SizedBox(
       width: double.infinity,
       height: double.infinity,
