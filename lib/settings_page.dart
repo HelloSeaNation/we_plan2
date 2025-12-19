@@ -169,15 +169,22 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar:
-          widget.isFirstTime
-              ? AppBar(backgroundColor: Colors.transparent, elevation: 0)
-              : AppBar(
-                title: const Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-      body: SafeArea(
-        child: SingleChildScrollView(
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        // Swipe right to go back (only if not first time setup)
+        if (!widget.isFirstTime && details.primaryVelocity != null && details.primaryVelocity! > 300) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        appBar:
+            widget.isFirstTime
+                ? AppBar(backgroundColor: Colors.transparent, elevation: 0)
+                : AppBar(
+                  title: const Text('Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+        body: SafeArea(
+          child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 24.0,
@@ -555,6 +562,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
