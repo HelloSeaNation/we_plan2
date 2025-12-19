@@ -20,6 +20,8 @@ class KioskService {
   static const String _keyScreensaverFolderPath = 'kiosk_screensaver_folder_path';
   static const String _keyScreensaverRotationInterval = 'kiosk_screensaver_rotation_interval';
   static const String _keyScreensaverUseFolder = 'kiosk_screensaver_use_folder';
+  static const String _keyDakboardUrl = 'kiosk_dakboard_url';
+  static const String _keyUseDakboard = 'kiosk_use_dakboard';
 
   // Default values
   static const int defaultInactivityTimeout = 5; // minutes
@@ -36,6 +38,8 @@ class KioskService {
   String _screensaverFolderPath = '';
   int _rotationIntervalSeconds = defaultRotationInterval;
   bool _useFolder = false;
+  String _dakboardUrl = '';
+  bool _useDakboard = false;
 
   // Image rotation state
   List<String> _imagePaths = [];
@@ -65,6 +69,8 @@ class KioskService {
   String get screensaverFolderPath => _screensaverFolderPath;
   int get rotationIntervalSeconds => _rotationIntervalSeconds;
   bool get useFolder => _useFolder;
+  String get dakboardUrl => _dakboardUrl;
+  bool get useDakboard => _useDakboard;
   bool get isScreensaverActive => _isScreensaverActive;
   List<String> get imagePaths => _imagePaths;
   int get currentImageIndex => _currentImageIndex;
@@ -85,6 +91,8 @@ class KioskService {
       _screensaverFolderPath = prefs.getString(_keyScreensaverFolderPath) ?? '';
       _rotationIntervalSeconds = prefs.getInt(_keyScreensaverRotationInterval) ?? defaultRotationInterval;
       _useFolder = prefs.getBool(_keyScreensaverUseFolder) ?? false;
+      _dakboardUrl = prefs.getString(_keyDakboardUrl) ?? '';
+      _useDakboard = prefs.getBool(_keyUseDakboard) ?? false;
 
       // Load images from folder if using folder mode
       if (_useFolder && _screensaverFolderPath.isNotEmpty) {
@@ -262,6 +270,8 @@ class KioskService {
     String? screensaverFolderPath,
     int? rotationIntervalSeconds,
     bool? useFolder,
+    String? dakboardUrl,
+    bool? useDakboard,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -309,6 +319,16 @@ class KioskService {
       if (useFolder != null) {
         _useFolder = useFolder;
         await prefs.setBool(_keyScreensaverUseFolder, useFolder);
+      }
+
+      if (dakboardUrl != null) {
+        _dakboardUrl = dakboardUrl;
+        await prefs.setString(_keyDakboardUrl, dakboardUrl);
+      }
+
+      if (useDakboard != null) {
+        _useDakboard = useDakboard;
+        await prefs.setBool(_keyUseDakboard, useDakboard);
       }
 
       // Reload images if folder settings changed
