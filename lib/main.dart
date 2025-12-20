@@ -2312,7 +2312,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   : double.infinity,
               padding: EdgeInsets.symmetric(
                 horizontal: Responsive.isMobile(context) ? 8 : 16,
-                vertical: 8,
+                vertical: Responsive.isMobile(context) ? 8 : 0,
               ),
               // Add card-like appearance only on very large screens
               decoration: kIsWeb && Responsive.width(context) > 1400
@@ -2538,8 +2538,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Calculate row height based on available screen height for tablet
     final screenHeight = Responsive.height(context);
-    // Subtract: AppBar (~56) + top padding (20) + header row (~50) + days of week row (~40)
-    final availableHeight = screenHeight - 166;
+    // Subtract: AppBar (48) + header row (~50) + days of week row (~40)
+    final availableHeight = screenHeight - 138;
     final calculatedRowHeight = isLargeScreen
         ? (availableHeight / 6) // 6 rows of weeks to fill screen
         : 105.0;
@@ -2554,7 +2554,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final eventAreaHeight = isLargeScreen ? (rowHeight - 38) : 32.0;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: isLargeScreen ? MainAxisSize.max : MainAxisSize.min,
       children: [
         GestureDetector(
           onHorizontalDragEnd: (details) {
@@ -2589,6 +2589,7 @@ class _MyHomePageState extends State<MyHomePage> {
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
             startingDayOfWeek: StartingDayOfWeek.monday,
+            sixWeekMonthsEnforced: true, // Always show 6 rows for consistent height
             // Calendar styling
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
