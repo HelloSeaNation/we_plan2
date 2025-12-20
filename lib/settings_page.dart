@@ -41,6 +41,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _screensaverFolderPathController =
       TextEditingController();
   final TextEditingController _dakboardUrlController = TextEditingController();
+  final TextEditingController _weatherLocationController = TextEditingController();
   bool _useFolder = false;
   bool _useDakboard = false;
   bool _useDashboard = false;
@@ -85,6 +86,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _useDakboard = kioskService.useDakboard;
       _useDashboard = kioskService.useDashboard;
       _dakboardUrlController.text = kioskService.dakboardUrl;
+      _weatherLocationController.text = kioskService.weatherLocation;
       _rotationInterval = kioskService.rotationIntervalSeconds;
     });
   }
@@ -95,6 +97,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _screensaverImageUrlController.dispose();
     _screensaverFolderPathController.dispose();
     _dakboardUrlController.dispose();
+    _weatherLocationController.dispose();
     super.dispose();
   }
 
@@ -139,6 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
         useDakboard: _useDakboard,
         useDashboard: _useDashboard,
         dakboardUrl: _dakboardUrlController.text.trim(),
+        weatherLocation: _weatherLocationController.text.trim(),
       );
     }
 
@@ -1322,6 +1326,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Displays a beautiful dashboard with:\n'
                       '• Large clock with current time\n'
                       '• Today\'s date\n'
+                      '• Inspirational quotes\n'
+                      '• Weather (optional)\n'
                       '• Your upcoming calendar events\n\n'
                       'Tap anywhere to return to calendar.',
                       textAlign: TextAlign.center,
@@ -1329,6 +1335,20 @@ class _SettingsPageState extends State<SettingsPage> {
                         fontSize: isLargeScreen ? 14 : 12,
                         color: Colors.grey[700],
                         height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _weatherLocationController,
+                      decoration: InputDecoration(
+                        labelText: 'Weather Location (optional)',
+                        hintText: 'e.g., Auckland, New Zealand',
+                        prefixIcon: const Icon(Icons.location_on),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                     ),
                   ],
