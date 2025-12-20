@@ -336,6 +336,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        const SizedBox(width: 24), // Left padding
         // Left side: Clock, Date, Weather, and Quote
         Expanded(
           flex: 3,
@@ -343,20 +344,20 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Clock and Weather row
+              _buildClock(),
+              const SizedBox(height: 4),
+              // Date and Weather row
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _buildClock(),
+                  _buildDate(),
                   if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 32),
                     _buildWeather(),
                   ],
                 ],
               ),
-              const SizedBox(height: 8),
-              _buildDate(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               _buildQuote(),
             ],
           ),
@@ -365,8 +366,8 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         // Divider
         Container(
           width: 1,
-          height: 200,
-          margin: const EdgeInsets.symmetric(horizontal: 32),
+          height: 250,
+          margin: const EdgeInsets.symmetric(horizontal: 40),
           color: Colors.white24,
         ),
 
@@ -375,6 +376,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
           flex: 2,
           child: _buildEventsSection(),
         ),
+        const SizedBox(width: 16), // Right padding
       ],
     );
   }
@@ -386,13 +388,13 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
       children: [
         const Spacer(flex: 1),
         _buildClock(),
-        if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          _buildWeather(),
-        ],
         const SizedBox(height: 8),
         _buildDate(),
-        const SizedBox(height: 20),
+        if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildWeather(),
+        ],
+        const SizedBox(height: 28),
         _buildQuote(),
         const Spacer(flex: 1),
         _buildEventsSection(),
@@ -414,10 +416,10 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         Text(
           timeFormat.format(_currentTime),
           style: const TextStyle(
-            fontSize: 96,
+            fontSize: 144,
             fontWeight: FontWeight.w200,
             color: Colors.white,
-            letterSpacing: -2,
+            letterSpacing: -4,
           ),
         ),
         Column(
@@ -427,7 +429,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             Text(
               secondsFormat.format(_currentTime),
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 48,
                 fontWeight: FontWeight.w300,
                 color: Colors.white.withOpacity(0.7),
               ),
@@ -435,7 +437,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             Text(
               amPmFormat.format(_currentTime),
               style: TextStyle(
-                fontSize: 24,
+                fontSize: 36,
                 fontWeight: FontWeight.w400,
                 color: Colors.white.withOpacity(0.7),
               ),
@@ -452,9 +454,9 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     return Text(
       dateFormat.format(_currentTime),
       style: TextStyle(
-        fontSize: 24,
+        fontSize: 32,
         fontWeight: FontWeight.w300,
-        color: Colors.white.withOpacity(0.8),
+        color: Colors.white.withOpacity(0.85),
       ),
     );
   }
@@ -464,8 +466,8 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
       duration: const Duration(milliseconds: 500),
       child: Container(
         key: ValueKey(_currentQuote),
-        constraints: const BoxConstraints(maxWidth: 500),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: const BoxConstraints(maxWidth: 600),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.3),
           borderRadius: BorderRadius.circular(12),
@@ -474,7 +476,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
           '"$_currentQuote"',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontStyle: FontStyle.italic,
             fontWeight: FontWeight.w300,
             color: Colors.white.withOpacity(0.9),
