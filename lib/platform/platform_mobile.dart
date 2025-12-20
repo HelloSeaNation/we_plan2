@@ -45,4 +45,9 @@ class PlatformMobile implements PlatformInterface {
       await Permission.phone.request();
     }
   }
+
+  @override
+  void redirectToUrl(String url) {
+    // Not supported on mobile - use url_launcher instead if needed
+  }
 }

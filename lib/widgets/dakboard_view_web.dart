@@ -48,8 +48,11 @@ class _DakboardIframeWidgetState extends State<DakboardIframeWidget> {
         ..style.width = '100%'
         ..style.height = '100%'
         ..style.backgroundColor = 'black'
-        ..allow = 'fullscreen'
-        ..setAttribute('allowfullscreen', 'true');
+        // Allow various permissions for Dakboard to work properly
+        ..allow = 'fullscreen; autoplay; encrypted-media; picture-in-picture; geolocation'
+        ..setAttribute('allowfullscreen', 'true')
+        ..setAttribute('referrerpolicy', 'no-referrer-when-downgrade')
+        ..setAttribute('loading', 'eager');
 
       // Listen for load event
       _iframe!.onLoad.listen((_) {

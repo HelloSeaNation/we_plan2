@@ -50,4 +50,10 @@ class PlatformStub implements PlatformInterface {
     // Web doesn't need the same permissions as mobile
     return;
   }
+
+  @override
+  void redirectToUrl(String url) {
+    // Stub implementation - does nothing on non-web platforms
+    debugPrint('redirectToUrl is only supported on web platform');
+  }
 }

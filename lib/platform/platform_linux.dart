@@ -50,5 +50,11 @@ class PlatformLinux implements PlatformInterface {
     // like mobile platforms do
     // This is a no-op for Linux
   }
+
+  @override
+  void redirectToUrl(String url) {
+    // On Linux, we could open the URL in the default browser
+    // For now, this is a no-op as the main use case is web
+  }
 }
 

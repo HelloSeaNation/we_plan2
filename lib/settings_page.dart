@@ -43,6 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _dakboardUrlController = TextEditingController();
   bool _useFolder = false;
   bool _useDakboard = false;
+  bool _useDashboard = false;
   int _rotationInterval = KioskService.defaultRotationInterval;
 
   final List<int> _timeoutOptions = [1, 2, 5, 10, 15, 30];
@@ -82,6 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
           kioskService.screensaverFolderPath;
       _useFolder = kioskService.useFolder;
       _useDakboard = kioskService.useDakboard;
+      _useDashboard = kioskService.useDashboard;
       _dakboardUrlController.text = kioskService.dakboardUrl;
       _rotationInterval = kioskService.rotationIntervalSeconds;
     });
@@ -135,6 +137,7 @@ class _SettingsPageState extends State<SettingsPage> {
         rotationIntervalSeconds: _rotationInterval,
         useFolder: _useFolder,
         useDakboard: _useDakboard,
+        useDashboard: _useDashboard,
         dakboardUrl: _dakboardUrlController.text.trim(),
       );
     }
@@ -745,8 +748,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final isLargeScreen =
         Responsive.isTablet(context) || Responsive.isDesktop(context);
 
-    // Determine which mode is selected
-    int selectedMode = _useDakboard ? 2 : (_useFolder ? 1 : 0);
+    // Determine which mode is selected: 0=Image, 1=Slideshow, 2=Dakboard, 3=Dashboard
+    int selectedMode = _useDashboard ? 3 : (_useDakboard ? 2 : (_useFolder ? 1 : 0));
 
     return Container(
       decoration: BoxDecoration(
@@ -769,11 +772,13 @@ class _SettingsPageState extends State<SettingsPage> {
             Row(
               children: [
                 Icon(
-                  _useDakboard
-                      ? Icons.dashboard_outlined
-                      : (_useFolder
-                          ? Icons.photo_library_outlined
-                          : Icons.image_outlined),
+                  _useDashboard
+                      ? Icons.access_time
+                      : (_useDakboard
+                          ? Icons.dashboard_outlined
+                          : (_useFolder
+                              ? Icons.photo_library_outlined
+                              : Icons.image_outlined)),
                   color: _selectedColor,
                   size: isLargeScreen ? 28 : 24,
                 ),
@@ -791,11 +796,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _useDakboard
-                            ? 'Display Dakboard dashboard'
-                            : (_useFolder
-                                ? 'Multiple images will rotate automatically'
-                                : 'Single image display'),
+                        _useDashboard
+                            ? 'Clock, date & upcoming events'
+                            : (_useDakboard
+                                ? 'Display Dakboard dashboard'
+                                : (_useFolder
+                                    ? 'Multiple images will rotate automatically'
+                                    : 'Single image display')),
                         style: TextStyle(
                           fontSize: isLargeScreen ? 13 : 12,
                           color: Colors.grey[600],
@@ -824,6 +831,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         setState(() {
                           _useFolder = false;
                           _useDakboard = false;
+                          _useDashboard = false;
                         });
                       },
                       child: Container(
@@ -870,6 +878,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         setState(() {
                           _useFolder = true;
                           _useDakboard = false;
+                          _useDashboard = false;
                         });
                       },
                       child: Container(
@@ -916,6 +925,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         setState(() {
                           _useFolder = false;
                           _useDakboard = true;
+                          _useDashboard = false;
                         });
                       },
                       child: Container(
@@ -945,6 +955,53 @@ class _SettingsPageState extends State<SettingsPage> {
                                 fontSize: isLargeScreen ? 12 : 10,
                                 fontWeight: FontWeight.w600,
                                 color: selectedMode == 2
+                                    ? Colors.white
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Dashboard option
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _useFolder = false;
+                          _useDakboard = false;
+                          _useDashboard = true;
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          vertical: isLargeScreen ? 12 : 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: selectedMode == 3
+                              ? _selectedColor
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: isLargeScreen ? 20 : 18,
+                              color: selectedMode == 3
+                                  ? Colors.white
+                                  : Colors.grey[600],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Dashboard',
+                              style: TextStyle(
+                                fontSize: isLargeScreen ? 12 : 10,
+                                fontWeight: FontWeight.w600,
+                                color: selectedMode == 3
                                     ? Colors.white
                                     : Colors.grey[600],
                               ),
@@ -1228,6 +1285,50 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: Text(
                         'Enter your Dakboard private URL from the Dakboard app settings. The dashboard will display in full screen when screensaver activates.',
                         style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Dashboard info section
+            if (selectedMode == 3) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _selectedColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _selectedColor.withOpacity(0.3)),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 48,
+                      color: _selectedColor,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Custom Dashboard',
+                      style: TextStyle(
+                        fontSize: isLargeScreen ? 18 : 16,
+                        fontWeight: FontWeight.w600,
+                        color: _selectedColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Displays a beautiful dashboard with:\n'
+                      '• Large clock with current time\n'
+                      '• Today\'s date\n'
+                      '• Your upcoming calendar events\n\n'
+                      'Tap anywhere to return to calendar.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isLargeScreen ? 14 : 12,
+                        color: Colors.grey[700],
+                        height: 1.5,
                       ),
                     ),
                   ],
