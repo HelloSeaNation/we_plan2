@@ -392,6 +392,7 @@ class _MyHomePageState extends State<MyHomePage> {
             rotationIntervalSeconds: _kioskService.rotationIntervalSeconds,
             accentColor: _themeColor,
             onTap: () => Navigator.of(context).maybePop(),
+            weatherLocation: _kioskService.weatherLocation,
           ),
         ),
       ).then((_) {

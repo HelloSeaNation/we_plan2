@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../event_model.dart';
 
@@ -46,6 +48,7 @@ class DashboardScreensaver extends StatefulWidget {
   final int rotationIntervalSeconds; // Interval between image changes
   final Color accentColor;
   final VoidCallback? onTap;
+  final String? weatherLocation; // City name for weather (e.g., "Auckland")
 
   const DashboardScreensaver({
     super.key,
@@ -55,6 +58,7 @@ class DashboardScreensaver extends StatefulWidget {
     this.rotationIntervalSeconds = 10,
     this.accentColor = Colors.blue,
     this.onTap,
+    this.weatherLocation,
   });
 
   @override
@@ -65,12 +69,19 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
   late Timer _timer;
   Timer? _imageRotationTimer;
   Timer? _quoteRotationTimer;
+  Timer? _weatherRefreshTimer;
   DateTime _currentTime = DateTime.now();
   bool _hasNavigatedBack = false;
   int _currentImageIndex = 0;
   String? _currentBackgroundImage;
   String _currentQuote = '';
   final Random _random = Random();
+
+  // Weather state
+  String? _weatherTemp;
+  String? _weatherCondition;
+  String? _weatherIcon;
+  bool _weatherLoading = false;
 
   @override
   void initState() {
@@ -94,6 +105,63 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
 
     // Start quote rotation every 20 seconds
     _startQuoteRotation();
+
+    // Fetch weather if location is provided
+    if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) {
+      _fetchWeather();
+      // Refresh weather every 30 minutes
+      _weatherRefreshTimer = Timer.periodic(
+        const Duration(minutes: 30),
+        (_) => _fetchWeather(),
+      );
+    }
+  }
+
+  Future<void> _fetchWeather() async {
+    if (widget.weatherLocation == null || widget.weatherLocation!.isEmpty) return;
+
+    setState(() => _weatherLoading = true);
+
+    try {
+      // Using wttr.in API - free, no API key needed
+      final url = 'https://wttr.in/${Uri.encodeComponent(widget.weatherLocation!)}?format=j1';
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final current = data['current_condition'][0];
+
+        if (mounted) {
+          setState(() {
+            _weatherTemp = '${current['temp_C']}°C';
+            _weatherCondition = current['weatherDesc'][0]['value'];
+            _weatherIcon = _getWeatherEmoji(current['weatherCode']);
+            _weatherLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching weather: $e');
+      if (mounted) {
+        setState(() => _weatherLoading = false);
+      }
+    }
+  }
+
+  String _getWeatherEmoji(String code) {
+    final weatherCode = int.tryParse(code) ?? 0;
+    if (weatherCode == 113) return '☀️'; // Sunny
+    if (weatherCode == 116) return '⛅'; // Partly cloudy
+    if (weatherCode == 119 || weatherCode == 122) return '☁️'; // Cloudy
+    if (weatherCode >= 176 && weatherCode <= 263) return '🌧️'; // Rain
+    if (weatherCode >= 266 && weatherCode <= 299) return '🌧️'; // Light rain
+    if (weatherCode >= 302 && weatherCode <= 356) return '🌧️'; // Heavy rain
+    if (weatherCode >= 359 && weatherCode <= 395) return '⛈️'; // Thunderstorm
+    if (weatherCode >= 200 && weatherCode <= 232) return '⛈️'; // Thunderstorm
+    if (weatherCode >= 600 && weatherCode <= 622) return '❄️'; // Snow
+    if (weatherCode >= 371 && weatherCode <= 392) return '❄️'; // Snow
+    if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) return '🌫️'; // Fog
+    return '🌤️'; // Default
   }
 
   void _startQuoteRotation() {
@@ -144,6 +212,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     _timer.cancel();
     _imageRotationTimer?.cancel();
     _quoteRotationTimer?.cancel();
+    _weatherRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -200,6 +269,14 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
                     : _buildPortraitLayout(),
               ),
             ),
+
+            // Weather display (top-right)
+            if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty)
+              Positioned(
+                top: 40,
+                right: 32,
+                child: SafeArea(child: _buildWeather()),
+              ),
 
             // Tap hint (bottom)
             Positioned(
@@ -349,6 +426,70 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             height: 1.4,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWeather() {
+    if (_weatherLoading) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white54,
+          ),
+        ),
+      );
+    }
+
+    if (_weatherTemp == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _weatherIcon ?? '🌤️',
+            style: const TextStyle(fontSize: 32),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _weatherTemp!,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w300,
+                  color: Colors.white,
+                ),
+              ),
+              if (_weatherCondition != null)
+                Text(
+                  _weatherCondition!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

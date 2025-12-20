@@ -23,6 +23,7 @@ class KioskService {
   static const String _keyDakboardUrl = 'kiosk_dakboard_url';
   static const String _keyUseDakboard = 'kiosk_use_dakboard';
   static const String _keyUseDashboard = 'kiosk_use_dashboard';
+  static const String _keyWeatherLocation = 'kiosk_weather_location';
 
   // Default values
   static const int defaultInactivityTimeout = 5; // minutes
@@ -42,6 +43,7 @@ class KioskService {
   String _dakboardUrl = '';
   bool _useDakboard = false;
   bool _useDashboard = false;
+  String _weatherLocation = '';
 
   // Image rotation state
   List<String> _imagePaths = [];
@@ -74,6 +76,7 @@ class KioskService {
   String get dakboardUrl => _dakboardUrl;
   bool get useDakboard => _useDakboard;
   bool get useDashboard => _useDashboard;
+  String get weatherLocation => _weatherLocation;
   bool get isScreensaverActive => _isScreensaverActive;
   List<String> get imagePaths => _imagePaths;
   int get currentImageIndex => _currentImageIndex;
@@ -97,6 +100,7 @@ class KioskService {
       _dakboardUrl = prefs.getString(_keyDakboardUrl) ?? '';
       _useDakboard = prefs.getBool(_keyUseDakboard) ?? false;
       _useDashboard = prefs.getBool(_keyUseDashboard) ?? false;
+      _weatherLocation = prefs.getString(_keyWeatherLocation) ?? '';
 
       // Load images from folder if using folder mode
       if (_useFolder && _screensaverFolderPath.isNotEmpty) {
@@ -277,6 +281,7 @@ class KioskService {
     String? dakboardUrl,
     bool? useDakboard,
     bool? useDashboard,
+    String? weatherLocation,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -339,6 +344,11 @@ class KioskService {
       if (useDashboard != null) {
         _useDashboard = useDashboard;
         await prefs.setBool(_keyUseDashboard, useDashboard);
+      }
+
+      if (weatherLocation != null) {
+        _weatherLocation = weatherLocation;
+        await prefs.setString(_keyWeatherLocation, weatherLocation);
       }
 
       // Reload images if folder settings changed
