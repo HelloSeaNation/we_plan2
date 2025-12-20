@@ -81,6 +81,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
   String? _weatherTemp;
   String? _weatherCondition;
   String? _weatherIcon;
+  String? _weatherBackgroundUrl;
   bool _weatherLoading = false;
 
   @override
@@ -130,12 +131,14 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final current = data['current_condition'][0];
+        final weatherCode = current['weatherCode'];
 
         if (mounted) {
           setState(() {
             _weatherTemp = '${current['temp_C']}°C';
             _weatherCondition = current['weatherDesc'][0]['value'];
-            _weatherIcon = _getWeatherEmoji(current['weatherCode']);
+            _weatherIcon = _getWeatherEmoji(weatherCode);
+            _weatherBackgroundUrl = _getWeatherBackgroundUrl(weatherCode);
             _weatherLoading = false;
           });
         }
@@ -164,6 +167,41 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     return '🌤️'; // Default
   }
 
+  /// Get weather-themed background image URL based on weather code
+  String? _getWeatherBackgroundUrl(String code) {
+    final weatherCode = int.tryParse(code) ?? 0;
+
+    // Free high-quality weather background images from Unsplash
+    if (weatherCode == 113) {
+      // Sunny - bright blue sky
+      return 'https://images.unsplash.com/photo-1601297183305-6df142704ea2?w=1920&q=80';
+    }
+    if (weatherCode == 116) {
+      // Partly cloudy
+      return 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=1920&q=80';
+    }
+    if (weatherCode == 119 || weatherCode == 122) {
+      // Cloudy/Overcast
+      return 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=1920&q=80';
+    }
+    if ((weatherCode >= 176 && weatherCode <= 356) ||
+        (weatherCode >= 359 && weatherCode <= 395)) {
+      // Rain/Thunderstorm
+      return 'https://images.unsplash.com/photo-1519692933481-e162a57d6721?w=1920&q=80';
+    }
+    if ((weatherCode >= 600 && weatherCode <= 622) ||
+        (weatherCode >= 371 && weatherCode <= 392)) {
+      // Snow
+      return 'https://images.unsplash.com/photo-1478265409131-1f65c88f965c?w=1920&q=80';
+    }
+    if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) {
+      // Fog/Mist
+      return 'https://images.unsplash.com/photo-1487621167193-286a54d2d73f?w=1920&q=80';
+    }
+    // Default - nice sky
+    return 'https://images.unsplash.com/photo-1517483000871-1dbf64a6e1c6?w=1920&q=80';
+  }
+
   void _startQuoteRotation() {
     _quoteRotationTimer = Timer.periodic(
       const Duration(seconds: 20),
@@ -183,6 +221,18 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     } else {
       _currentBackgroundImage = widget.backgroundImageUrl;
     }
+  }
+
+  /// Get the effective background URL - weather background takes priority
+  String? _getEffectiveBackground() {
+    // If weather location is set and we have a weather background, use it
+    if (widget.weatherLocation != null &&
+        widget.weatherLocation!.isNotEmpty &&
+        _weatherBackgroundUrl != null) {
+      return _weatherBackgroundUrl;
+    }
+    // Otherwise fall back to user-provided background
+    return _currentBackgroundImage;
   }
 
   void _startImageRotation() {
@@ -229,15 +279,14 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // Background image (if provided) - supports rotation
-            if (_currentBackgroundImage != null &&
-                _currentBackgroundImage!.isNotEmpty)
+            // Background image - weather background takes priority, then user images
+            if (_getEffectiveBackground() != null)
               Positioned.fill(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 800),
                   child: Image.network(
-                    _currentBackgroundImage!,
-                    key: ValueKey(_currentBackgroundImage),
+                    _getEffectiveBackground()!,
+                    key: ValueKey(_getEffectiveBackground()),
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(color: Colors.black),
                   ),
@@ -270,14 +319,6 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
               ),
             ),
 
-            // Weather display (top-right)
-            if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty)
-              Positioned(
-                top: 40,
-                right: 32,
-                child: SafeArea(child: _buildWeather()),
-              ),
-
             // Tap hint (bottom)
             Positioned(
               bottom: 20,
@@ -295,14 +336,24 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Left side: Clock, Date, and Quote
+        // Left side: Clock, Date, Weather, and Quote
         Expanded(
           flex: 3,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildClock(),
+              // Clock and Weather row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildClock(),
+                  if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
+                    const SizedBox(width: 24),
+                    _buildWeather(),
+                  ],
+                ],
+              ),
               const SizedBox(height: 8),
               _buildDate(),
               const SizedBox(height: 24),
@@ -335,6 +386,10 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
       children: [
         const Spacer(flex: 1),
         _buildClock(),
+        if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildWeather(),
+        ],
         const SizedBox(height: 8),
         _buildDate(),
         const SizedBox(height: 20),
