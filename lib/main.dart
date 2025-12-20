@@ -302,8 +302,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _dakboardUrl = _kioskService.dakboardUrl;
     });
 
-    // Initialize WebViewController for Dakboard if needed
-    if (_useDakboard && _dakboardUrl.isNotEmpty) {
+    // Initialize WebViewController for Dakboard if needed (not on web - web uses iframe)
+    if (!kIsWeb && _useDakboard && _dakboardUrl.isNotEmpty) {
       _initDakboardWebView();
     }
 
@@ -392,8 +392,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _dakboardUrl = _kioskService.dakboardUrl;
     });
 
-    // Re-initialize WebView if Dakboard settings changed
-    if (_useDakboard && _dakboardUrl.isNotEmpty) {
+    // Re-initialize WebView if Dakboard settings changed (not on web - web uses iframe)
+    if (!kIsWeb && _useDakboard && _dakboardUrl.isNotEmpty) {
       _initDakboardWebView();
     }
 
