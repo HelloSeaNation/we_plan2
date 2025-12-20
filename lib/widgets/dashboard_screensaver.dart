@@ -271,11 +271,16 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     final screenSize = MediaQuery.of(context).size;
     final isLandscape = screenSize.width > screenSize.height;
 
-    return GestureDetector(
-      onTap: _handleTap,
-      onPanDown: (_) => _handleTap(),
+    // Use Listener for raw pointer events - more reliable on Raspberry Pi
+    return Listener(
+      onPointerDown: (_) => _handleTap(),
+      onPointerUp: (_) => _handleTap(),
       behavior: HitTestBehavior.opaque,
-      child: Scaffold(
+      child: GestureDetector(
+        onTap: _handleTap,
+        onPanDown: (_) => _handleTap(),
+        behavior: HitTestBehavior.opaque,
+        child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
           children: [
@@ -333,6 +338,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

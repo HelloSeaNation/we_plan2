@@ -36,13 +36,18 @@ class DakboardDisplayPage extends StatelessWidget {
             ),
 
           // Transparent tap overlay - tap anywhere to return
+          // Use Listener for raw pointer events - more reliable on Raspberry Pi
           Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () => Navigator.of(context).pop(),
-              onPanDown: (_) => Navigator.of(context).pop(),
-              child: Container(
-                color: Colors.transparent,
+            child: Listener(
+              onPointerDown: (_) => Navigator.of(context).pop(),
+              behavior: HitTestBehavior.opaque,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => Navigator.of(context).pop(),
+                onPanDown: (_) => Navigator.of(context).pop(),
+                child: Container(
+                  color: Colors.transparent,
+                ),
               ),
             ),
           ),
