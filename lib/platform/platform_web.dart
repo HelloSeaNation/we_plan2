@@ -51,4 +51,10 @@ class PlatformWeb implements PlatformInterface {
     // Web doesn't need the same permissions as mobile
     return;
   }
+
+  @override
+  void redirectToUrl(String url) {
+    // Redirect the browser to the specified URL
+    html.window.location.href = url;
+  }
 }

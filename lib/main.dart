@@ -27,6 +27,8 @@ import 'widgets/responsive_layout.dart';
 import 'widgets/centered_container.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'widgets/dakboard_view.dart' as dakboard_view;
+import 'widgets/dakboard_display_page.dart';
+import 'widgets/dashboard_screensaver.dart';
 
 String dateText(DateTime date) {
   return normalizeDate(date).toString();
@@ -213,6 +215,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _useImageFolder = false;
   String _currentSlideshowImage = '';
   bool _useDakboard = false;
+  bool _useDashboard = false;
   String _dakboardUrl = '';
   WebViewController? _webViewController;
 
@@ -299,6 +302,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _useImageFolder = _kioskService.useFolder;
       _currentSlideshowImage = _kioskService.currentImagePath;
       _useDakboard = _kioskService.useDakboard;
+      _useDashboard = _kioskService.useDashboard;
       _dakboardUrl = _kioskService.dakboardUrl;
     });
 
@@ -371,7 +375,95 @@ class _MyHomePageState extends State<MyHomePage> {
   // Screensaver callbacks
   void _onScreensaverActivate() {
     if (!mounted) return;
+
+    // If Dashboard mode is enabled, navigate to custom dashboard
+    if (_useDashboard) {
+      debugPrint('Kiosk: Opening Dashboard screensaver');
+      final upcomingEvents = _getUpcomingEvents();
+      // Get background images - use folder images if available, otherwise single image
+      final backgroundImages = _kioskService.imagePaths.isNotEmpty
+          ? _kioskService.imagePaths
+          : (_screensaverImageUrl.isNotEmpty ? [_screensaverImageUrl] : null);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DashboardScreensaver(
+            upcomingEvents: upcomingEvents,
+            backgroundImages: backgroundImages,
+            rotationIntervalSeconds: _kioskService.rotationIntervalSeconds,
+            accentColor: _themeColor,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+      ).then((_) {
+        // When returning from Dashboard, reset kiosk timers and rebuild UI
+        if (mounted) {
+          if (_isKioskEnabled) {
+            _kioskService.onUserActivity();
+          }
+          // Force rebuild to restore calendar UI
+          setState(() {});
+          debugPrint('Returned from Dashboard screensaver');
+        }
+      });
+      return;
+    }
+
+    // If Dakboard mode is enabled on web, navigate to full-screen Dakboard page
+    if (kIsWeb && _useDakboard && _dakboardUrl.isNotEmpty) {
+      debugPrint('Kiosk: Opening Dakboard display page');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DakboardDisplayPage(dakboardUrl: _dakboardUrl),
+        ),
+      ).then((_) {
+        // When returning from Dakboard, reset kiosk timers and rebuild UI
+        if (mounted) {
+          if (_isKioskEnabled) {
+            _kioskService.onUserActivity();
+          }
+          // Force rebuild to restore calendar UI
+          setState(() {});
+          debugPrint('Returned from Dakboard screensaver');
+        }
+      });
+      return;
+    }
+
     setState(() => _isScreensaverActive = true);
+  }
+
+  // Helper to get upcoming events for dashboard screensaver
+  List<CachedEvent> _getUpcomingEvents() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final List<CachedEvent> upcoming = [];
+
+    // Collect events from the next 7 days
+    for (int i = 0; i < 7; i++) {
+      final date = today.add(Duration(days: i));
+      final dateKey = dateText(date);
+      final dayEvents = _events[dateKey] ?? [];
+
+      for (final event in dayEvents) {
+        upcoming.add(CachedEvent(
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          date: date.toIso8601String(),
+          fingerprint: event.fingerprint,
+          deviceName: event.deviceName,
+          colorValue: event.color?.value,
+          startTimeHour: event.startTime?.hour,
+          startTimeMinute: event.startTime?.minute,
+          endTimeHour: event.endTime?.hour,
+          endTimeMinute: event.endTime?.minute,
+        ));
+      }
+    }
+
+    // Sort by date
+    upcoming.sort((a, b) => a.date.compareTo(b.date));
+    return upcoming;
   }
 
   void _onScreensaverDeactivate() {
@@ -389,6 +481,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _useImageFolder = _kioskService.useFolder;
       _currentSlideshowImage = _kioskService.currentImagePath;
       _useDakboard = _kioskService.useDakboard;
+      _useDashboard = _kioskService.useDashboard;
       _dakboardUrl = _kioskService.dakboardUrl;
     });
 
