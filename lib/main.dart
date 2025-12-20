@@ -2345,7 +2345,9 @@ class _MyHomePageState extends State<MyHomePage> {
   // Helper method to build screensaver content based on mode
   Widget _buildScreensaverContent() {
     // Check if using Dakboard mode
-    if (_useDakboard && _dakboardUrl.isNotEmpty && _webViewController != null) {
+    // For web: use iframe (no WebViewController needed)
+    // For mobile/desktop: use WebViewController
+    if (_useDakboard && _dakboardUrl.isNotEmpty && (kIsWeb || _webViewController != null)) {
       return _buildDakboardScreensaver();
     }
     // Check if using slideshow mode with folder/multiple images
