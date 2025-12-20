@@ -284,11 +284,16 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
               Positioned.fill(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 800),
-                  child: Image.network(
-                    _getEffectiveBackground()!,
+                  child: SizedBox.expand(
                     key: ValueKey(_getEffectiveBackground()),
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: Colors.black),
+                    child: Image.network(
+                      _getEffectiveBackground()!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      alignment: Alignment.center,
+                      errorBuilder: (_, __, ___) => Container(color: Colors.black),
+                    ),
                   ),
                 ),
               ),
