@@ -1,7 +1,42 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../event_model.dart';
+
+/// Inspirational quotes for the dashboard screensaver
+const List<String> _inspirationalQuotes = [
+  "The best time to plant a tree was 20 years ago. The second best time is now.",
+  "Your time is limited, don't waste it living someone else's life.",
+  "The only way to do great work is to love what you do.",
+  "Believe you can and you're halfway there.",
+  "In the middle of difficulty lies opportunity.",
+  "The future belongs to those who believe in the beauty of their dreams.",
+  "It does not matter how slowly you go as long as you do not stop.",
+  "Everything you've ever wanted is on the other side of fear.",
+  "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+  "The only impossible journey is the one you never begin.",
+  "What you get by achieving your goals is not as important as what you become.",
+  "Life is what happens when you're busy making other plans.",
+  "The purpose of our lives is to be happy.",
+  "Get busy living or get busy dying.",
+  "You only live once, but if you do it right, once is enough.",
+  "Many of life's failures are people who did not realize how close they were to success.",
+  "The way to get started is to quit talking and begin doing.",
+  "If life were predictable it would cease to be life, and be without flavor.",
+  "Life is really simple, but we insist on making it complicated.",
+  "The greatest glory in living lies not in never falling, but in rising every time we fall.",
+  "Your present circumstances don't determine where you can go; they merely determine where you start.",
+  "The secret of getting ahead is getting started.",
+  "Don't watch the clock; do what it does. Keep going.",
+  "Everything has beauty, but not everyone sees it.",
+  "The best revenge is massive success.",
+  "Life shrinks or expands in proportion to one's courage.",
+  "What lies behind us and what lies before us are tiny matters compared to what lies within us.",
+  "Happiness is not something ready made. It comes from your own actions.",
+  "If you want to live a happy life, tie it to a goal, not to people or things.",
+  "The mind is everything. What you think you become.",
+];
 
 /// Custom dashboard screensaver that displays clock, date, and upcoming events
 class DashboardScreensaver extends StatefulWidget {
@@ -29,10 +64,13 @@ class DashboardScreensaver extends StatefulWidget {
 class _DashboardScreensaverState extends State<DashboardScreensaver> {
   late Timer _timer;
   Timer? _imageRotationTimer;
+  Timer? _quoteRotationTimer;
   DateTime _currentTime = DateTime.now();
   bool _hasNavigatedBack = false;
   int _currentImageIndex = 0;
   String? _currentBackgroundImage;
+  String _currentQuote = '';
+  final Random _random = Random();
 
   @override
   void initState() {
@@ -40,6 +78,9 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
 
     // Set initial background image
     _updateCurrentBackgroundImage();
+
+    // Set initial quote
+    _currentQuote = _inspirationalQuotes[_random.nextInt(_inspirationalQuotes.length)];
 
     // Update time every second
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -50,6 +91,22 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
 
     // Start image rotation if we have multiple images
     _startImageRotation();
+
+    // Start quote rotation every 20 seconds
+    _startQuoteRotation();
+  }
+
+  void _startQuoteRotation() {
+    _quoteRotationTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) {
+        if (mounted) {
+          setState(() {
+            _currentQuote = _inspirationalQuotes[_random.nextInt(_inspirationalQuotes.length)];
+          });
+        }
+      },
+    );
   }
 
   void _updateCurrentBackgroundImage() {
@@ -86,6 +143,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
   void dispose() {
     _timer.cancel();
     _imageRotationTimer?.cancel();
+    _quoteRotationTimer?.cancel();
     super.dispose();
   }
 
@@ -160,7 +218,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Left side: Clock and Date
+        // Left side: Clock, Date, and Quote
         Expanded(
           flex: 3,
           child: Column(
@@ -170,6 +228,8 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
               _buildClock(),
               const SizedBox(height: 8),
               _buildDate(),
+              const SizedBox(height: 24),
+              _buildQuote(),
             ],
           ),
         ),
@@ -200,6 +260,8 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         _buildClock(),
         const SizedBox(height: 8),
         _buildDate(),
+        const SizedBox(height: 20),
+        _buildQuote(),
         const Spacer(flex: 1),
         _buildEventsSection(),
         const Spacer(flex: 2),
@@ -261,6 +323,32 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         fontSize: 24,
         fontWeight: FontWeight.w300,
         color: Colors.white.withOpacity(0.8),
+      ),
+    );
+  }
+
+  Widget _buildQuote() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      child: Container(
+        key: ValueKey(_currentQuote),
+        constraints: const BoxConstraints(maxWidth: 500),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          '"$_currentQuote"',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 16,
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w300,
+            color: Colors.white.withOpacity(0.9),
+            height: 1.4,
+          ),
+        ),
       ),
     );
   }

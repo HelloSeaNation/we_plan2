@@ -210,7 +210,7 @@ class KioskService {
   void _resetScreensaverTimer() {
     _screensaverTimer?.cancel();
     _screensaverTimer = Timer(
-      Duration(minutes: _screensaverTimeoutMinutes),
+      const Duration(seconds: 5), // TODO: Change back to Duration(minutes: _screensaverTimeoutMinutes) after testing
       () {
         debugPrint('Kiosk: Screensaver activated');
         _isScreensaverActive = true;
