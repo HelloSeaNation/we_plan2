@@ -2414,20 +2414,27 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
           // Screensaver overlay
+          // Use Listener for raw pointer events - more reliable on Raspberry Pi
           if (_isScreensaverActive)
-            GestureDetector(
-              onTap: () {
-                _onUserActivity();
-              },
-              onPanDown: (_) {
-                _onUserActivity();
-              },
-              child: AnimatedOpacity(
-                opacity: _isScreensaverActive ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 500),
-                child: Container(
-                  color: Colors.black,
-                  child: _buildScreensaverContent(),
+            Listener(
+              onPointerDown: (_) => _onUserActivity(),
+              onPointerUp: (_) => _onUserActivity(),
+              behavior: HitTestBehavior.opaque,
+              child: GestureDetector(
+                onTap: () {
+                  _onUserActivity();
+                },
+                onPanDown: (_) {
+                  _onUserActivity();
+                },
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedOpacity(
+                  opacity: _isScreensaverActive ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 500),
+                  child: Container(
+                    color: Colors.black,
+                    child: _buildScreensaverContent(),
+                  ),
                 ),
               ),
             ),
