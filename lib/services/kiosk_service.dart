@@ -27,7 +27,7 @@ class KioskService {
 
   // Default values
   static const int defaultInactivityTimeout = 5; // minutes
-  static const int defaultScreensaverTimeout = 10; // minutes
+  static const int defaultScreensaverTimeout = 60; // seconds
   static const int defaultRotationInterval = 10; // seconds
 
   // State
@@ -35,7 +35,7 @@ class KioskService {
   int _inactivityTimeoutMinutes = defaultInactivityTimeout;
   bool _hideDeleteEdit = false;
   bool _screensaverEnabled = false;
-  int _screensaverTimeoutMinutes = defaultScreensaverTimeout;
+  int _screensaverTimeoutSeconds = defaultScreensaverTimeout;
   String _screensaverImageUrl = '';
   String _screensaverFolderPath = '';
   int _rotationIntervalSeconds = defaultRotationInterval;
@@ -68,7 +68,7 @@ class KioskService {
   int get inactivityTimeoutMinutes => _inactivityTimeoutMinutes;
   bool get hideDeleteEdit => _hideDeleteEdit;
   bool get screensaverEnabled => _screensaverEnabled;
-  int get screensaverTimeoutMinutes => _screensaverTimeoutMinutes;
+  int get screensaverTimeoutSeconds => _screensaverTimeoutSeconds;
   String get screensaverImageUrl => _screensaverImageUrl;
   String get screensaverFolderPath => _screensaverFolderPath;
   int get rotationIntervalSeconds => _rotationIntervalSeconds;
@@ -92,7 +92,7 @@ class KioskService {
       _inactivityTimeoutMinutes = prefs.getInt(_keyInactivityTimeout) ?? defaultInactivityTimeout;
       _hideDeleteEdit = prefs.getBool(_keyHideDeleteEdit) ?? false;
       _screensaverEnabled = prefs.getBool(_keyScreensaverEnabled) ?? false;
-      _screensaverTimeoutMinutes = prefs.getInt(_keyScreensaverTimeout) ?? defaultScreensaverTimeout;
+      _screensaverTimeoutSeconds = prefs.getInt(_keyScreensaverTimeout) ?? defaultScreensaverTimeout;
       _screensaverImageUrl = prefs.getString(_keyScreensaverImageUrl) ?? '';
       _screensaverFolderPath = prefs.getString(_keyScreensaverFolderPath) ?? '';
       _rotationIntervalSeconds = prefs.getInt(_keyScreensaverRotationInterval) ?? defaultRotationInterval;
@@ -214,7 +214,7 @@ class KioskService {
   void _resetScreensaverTimer() {
     _screensaverTimer?.cancel();
     _screensaverTimer = Timer(
-      const Duration(seconds: 5), // TODO: Change back to Duration(minutes: _screensaverTimeoutMinutes) after testing
+      Duration(seconds: _screensaverTimeoutSeconds),
       () {
         debugPrint('Kiosk: Screensaver activated');
         _isScreensaverActive = true;
@@ -273,7 +273,7 @@ class KioskService {
     int? inactivityTimeoutMinutes,
     bool? hideDeleteEdit,
     bool? screensaverEnabled,
-    int? screensaverTimeoutMinutes,
+    int? screensaverTimeoutSeconds,
     String? screensaverImageUrl,
     String? screensaverFolderPath,
     int? rotationIntervalSeconds,
@@ -306,9 +306,9 @@ class KioskService {
         await prefs.setBool(_keyScreensaverEnabled, screensaverEnabled);
       }
 
-      if (screensaverTimeoutMinutes != null) {
-        _screensaverTimeoutMinutes = screensaverTimeoutMinutes;
-        await prefs.setInt(_keyScreensaverTimeout, screensaverTimeoutMinutes);
+      if (screensaverTimeoutSeconds != null) {
+        _screensaverTimeoutSeconds = screensaverTimeoutSeconds;
+        await prefs.setInt(_keyScreensaverTimeout, screensaverTimeoutSeconds);
       }
 
       if (screensaverImageUrl != null) {

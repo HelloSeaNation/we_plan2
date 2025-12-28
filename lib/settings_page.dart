@@ -48,6 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
   int _rotationInterval = KioskService.defaultRotationInterval;
 
   final List<int> _timeoutOptions = [1, 2, 5, 10, 15, 30];
+  final List<int> _screensaverTimeoutOptions = [10, 30, 60]; // seconds
   final List<int> _rotationOptions = [5, 10, 15, 30, 60]; // seconds
 
   final List<Color> _colorOptions = [
@@ -78,7 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _inactivityTimeout = kioskService.inactivityTimeoutMinutes;
       _hideDeleteEdit = kioskService.hideDeleteEdit;
       _screensaverEnabled = kioskService.screensaverEnabled;
-      _screensaverTimeout = kioskService.screensaverTimeoutMinutes;
+      _screensaverTimeout = kioskService.screensaverTimeoutSeconds;
       _screensaverImageUrlController.text = kioskService.screensaverImageUrl;
       _screensaverFolderPathController.text =
           kioskService.screensaverFolderPath;
@@ -134,7 +135,7 @@ class _SettingsPageState extends State<SettingsPage> {
         inactivityTimeoutMinutes: _inactivityTimeout,
         hideDeleteEdit: _hideDeleteEdit,
         screensaverEnabled: _screensaverEnabled,
-        screensaverTimeoutMinutes: _screensaverTimeout,
+        screensaverTimeoutSeconds: _screensaverTimeout,
         screensaverImageUrl: _screensaverImageUrlController.text.trim(),
         screensaverFolderPath: _screensaverFolderPathController.text.trim(),
         rotationIntervalSeconds: _rotationInterval,
@@ -517,7 +518,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       if (_screensaverEnabled) ...[
                         const SizedBox(height: 16),
-                        _buildTimeoutSelector(
+                        _buildScreensaverTimeoutSelector(
                           icon: Icons.bedtime_outlined,
                           title: 'Screensaver timeout',
                           value: _screensaverTimeout,
@@ -732,6 +733,80 @@ class _SettingsPageState extends State<SettingsPage> {
                   return DropdownMenuItem<int>(
                     value: minutes,
                     child: Text('$minutes min'),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    onChanged(newValue);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScreensaverTimeoutSelector({
+    required IconData icon,
+    required String title,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    final isLargeScreen =
+        Responsive.isTablet(context) || Responsive.isDesktop(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isLargeScreen ? 20 : 16,
+          vertical: isLargeScreen ? 12 : 8,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: _selectedColor, size: isLargeScreen ? 28 : 24),
+            SizedBox(width: isLargeScreen ? 16 : 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: isLargeScreen ? 16 : 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: isLargeScreen ? 12 : 8),
+              decoration: BoxDecoration(
+                color: _selectedColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButton<int>(
+                value: value,
+                underline: const SizedBox(),
+                icon: Icon(Icons.arrow_drop_down, color: _selectedColor),
+                style: TextStyle(
+                  color: _selectedColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: isLargeScreen ? 15 : 14,
+                ),
+                items: _screensaverTimeoutOptions.map((seconds) {
+                  return DropdownMenuItem<int>(
+                    value: seconds,
+                    child: Text('$seconds sec'),
                   );
                 }).toList(),
                 onChanged: (newValue) {
