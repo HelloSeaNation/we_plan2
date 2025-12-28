@@ -2589,7 +2589,7 @@ class _MyHomePageState extends State<MyHomePage> {
             focusedDay: _focusedDay,
             calendarFormat: _calendarFormat,
             startingDayOfWeek: StartingDayOfWeek.monday,
-            sixWeekMonthsEnforced: true, // Always show 6 rows for consistent height
+            sixWeekMonthsEnforced: false, // Show 5 rows when possible
             // Calendar styling
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
