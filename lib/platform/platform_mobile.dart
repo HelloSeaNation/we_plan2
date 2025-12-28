@@ -50,4 +50,12 @@ class PlatformMobile implements PlatformInterface {
   void redirectToUrl(String url) {
     // Not supported on mobile - use url_launcher instead if needed
   }
+
+  @override
+  bool get isFullscreen => false;
+
+  @override
+  void toggleFullscreen() {
+    // Not supported on mobile
+  }
 }

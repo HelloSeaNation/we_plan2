@@ -56,4 +56,13 @@ class PlatformStub implements PlatformInterface {
     // Stub implementation - does nothing on non-web platforms
     debugPrint('redirectToUrl is only supported on web platform');
   }
+
+  @override
+  bool get isFullscreen => false;
+
+  @override
+  void toggleFullscreen() {
+    // Stub implementation - does nothing on non-web platforms
+    debugPrint('toggleFullscreen is only supported on web platform');
+  }
 }

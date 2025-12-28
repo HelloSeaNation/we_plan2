@@ -8,4 +8,10 @@ abstract class PlatformInterface {
 
   /// Redirect the browser to a different URL (web only)
   void redirectToUrl(String url);
+
+  /// Check if currently in fullscreen mode (web only)
+  bool get isFullscreen;
+
+  /// Toggle fullscreen mode (web only)
+  void toggleFullscreen();
 }
