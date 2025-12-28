@@ -210,6 +210,9 @@ class _MyHomePageState extends State<MyHomePage> {
   // Events panel visibility (for tablet/desktop sliding panel)
   bool _isEventsPanelVisible = false;
 
+  // App bar menu visibility (for collapsible menu)
+  bool _isMenuExpanded = false;
+
   // Kiosk mode state
   final KioskService _kioskService = KioskService();
   bool _isKioskEnabled = false;
@@ -2151,78 +2154,105 @@ class _MyHomePageState extends State<MyHomePage> {
                             color: _themeColor,
                           ),
                         ),
-                        const SizedBox(width: 32),
-                        // Menu options with larger touch targets
-                        _buildAppBarButton(
-                          icon: Icons.settings_outlined,
-                          label: 'Settings',
-                          onPressed: () => _navigateToSettings(),
-                          iconSize: iconSize,
-                          fontSize: buttonFontSize,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildAppBarButton(
-                          icon: Icons.share_outlined,
-                          label: 'Share',
-                          onPressed: () async {
-                            final prefs = await SharedPreferences.getInstance();
-                            final shareCode = prefs.getString('shareCode');
-                            if (shareCode != null) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ShareScreen(
-                                    shareCode: shareCode,
-                                    isFirstTimeUser: false,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'No share code found. Please setup sharing first.',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          iconSize: iconSize,
-                          fontSize: buttonFontSize,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildAppBarButton(
-                          icon: Icons.group_add_outlined,
-                          label: 'Join',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ShareSetupScreen(isFirstTime: false),
-                              ),
-                            );
-                          },
-                          iconSize: iconSize,
-                          fontSize: buttonFontSize,
-                        ),
-                        if (kIsWeb) ...[
-                          const SizedBox(width: 8),
-                          _buildAppBarButton(
-                            icon: Platform.instance.isFullscreen
-                                ? Icons.fullscreen_exit
-                                : Icons.fullscreen,
-                            label: Platform.instance.isFullscreen
-                                ? 'Exit'
-                                : 'Fullscreen',
-                            onPressed: () {
-                              Platform.instance.toggleFullscreen();
-                              setState(() {});
-                            },
-                            iconSize: iconSize,
-                            fontSize: buttonFontSize,
+                        const SizedBox(width: 16),
+                        // Menu toggle button
+                        IconButton(
+                          icon: AnimatedRotation(
+                            turns: _isMenuExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              _isMenuExpanded ? Icons.close : Icons.menu,
+                              color: _themeColor,
+                              size: iconSize,
+                            ),
                           ),
-                        ],
+                          onPressed: () {
+                            setState(() => _isMenuExpanded = !_isMenuExpanded);
+                          },
+                          tooltip: _isMenuExpanded ? 'Hide menu' : 'Show menu',
+                        ),
+                        // Animated menu items
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeInOut,
+                          child: _isMenuExpanded
+                              ? Row(
+                                  children: [
+                                    const SizedBox(width: 8),
+                                    _buildAppBarButton(
+                                      icon: Icons.settings_outlined,
+                                      label: 'Settings',
+                                      onPressed: () => _navigateToSettings(),
+                                      iconSize: iconSize,
+                                      fontSize: buttonFontSize,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildAppBarButton(
+                                      icon: Icons.share_outlined,
+                                      label: 'Share',
+                                      onPressed: () async {
+                                        final prefs = await SharedPreferences.getInstance();
+                                        final shareCode = prefs.getString('shareCode');
+                                        if (shareCode != null) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ShareScreen(
+                                                shareCode: shareCode,
+                                                isFirstTimeUser: false,
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'No share code found. Please setup sharing first.',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      iconSize: iconSize,
+                                      fontSize: buttonFontSize,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _buildAppBarButton(
+                                      icon: Icons.group_add_outlined,
+                                      label: 'Join',
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                ShareSetupScreen(isFirstTime: false),
+                                          ),
+                                        );
+                                      },
+                                      iconSize: iconSize,
+                                      fontSize: buttonFontSize,
+                                    ),
+                                    if (kIsWeb) ...[
+                                      const SizedBox(width: 8),
+                                      _buildAppBarButton(
+                                        icon: Platform.instance.isFullscreen
+                                            ? Icons.fullscreen_exit
+                                            : Icons.fullscreen,
+                                        label: Platform.instance.isFullscreen
+                                            ? 'Exit'
+                                            : 'Fullscreen',
+                                        onPressed: () {
+                                          Platform.instance.toggleFullscreen();
+                                          setState(() {});
+                                        },
+                                        iconSize: iconSize,
+                                        fontSize: buttonFontSize,
+                                      ),
+                                    ],
+                                  ],
+                                )
+                              : const SizedBox.shrink(),
+                        ),
                       ],
                     )
                   : Text(widget.title),
