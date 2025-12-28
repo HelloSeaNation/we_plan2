@@ -195,6 +195,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final Connectivity _connectivity = Connectivity();
   StreamSubscription? _connectivitySubscription;
   bool _isOnline = true;
+  bool _isOfflineDialogShowing = false;
   DeletedEventInfo? _lastDeletedEventInfo;
   Timer? _deleteTimer;
   Color _themeColor = Colors.blue;
@@ -709,8 +710,27 @@ class _MyHomePageState extends State<MyHomePage> {
 
       if (isNowOnline) {
         debugPrint('✅ Back online. Syncing data...');
+        // Auto-dismiss offline dialog if showing
+        if (_isOfflineDialogShowing && mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          _isOfflineDialogShowing = false;
+          // Show "back online" notification
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.wifi, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Back online! Refreshing calendar...'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
         await _syncQueuedActions(); // your offline queue
-        await _refreshHiveCacheFromFirestore(); // 🔥 NEW!
+        await _refreshHiveCacheFromFirestore();
         await _fetchEventsForVisibleMonth(_focusedDay);
       } else {
         _showOfflineWarning();
@@ -720,8 +740,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _showOfflineWarning() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || _isOfflineDialogShowing) return;
 
+      _isOfflineDialogShowing = true;
       showDialog(
         context: context,
         barrierDismissible: true,
@@ -743,11 +764,22 @@ class _MyHomePageState extends State<MyHomePage> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
+              Text(
+                'Will auto-refresh when connected.',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                _isOfflineDialogShowing = false;
+                Navigator.pop(context);
+              },
               style: TextButton.styleFrom(
                 minimumSize: const Size(100, 40),
                 textStyle: const TextStyle(fontWeight: FontWeight.w500),
@@ -761,7 +793,10 @@ class _MyHomePageState extends State<MyHomePage> {
             vertical: 12,
           ),
         ),
-      );
+      ).then((_) {
+        // Reset flag if dialog is dismissed by tapping outside
+        _isOfflineDialogShowing = false;
+      });
     });
   }
 
