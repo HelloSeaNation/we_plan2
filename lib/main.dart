@@ -2168,6 +2168,23 @@ class _MyHomePageState extends State<MyHomePage> {
                           iconSize: iconSize,
                           fontSize: buttonFontSize,
                         ),
+                        if (kIsWeb) ...[
+                          const SizedBox(width: 8),
+                          _buildAppBarButton(
+                            icon: Platform.instance.isFullscreen
+                                ? Icons.fullscreen_exit
+                                : Icons.fullscreen,
+                            label: Platform.instance.isFullscreen
+                                ? 'Exit'
+                                : 'Fullscreen',
+                            onPressed: () {
+                              Platform.instance.toggleFullscreen();
+                              setState(() {});
+                            },
+                            iconSize: iconSize,
+                            fontSize: buttonFontSize,
+                          ),
+                        ],
                       ],
                     )
                   : Text(widget.title),
@@ -2202,6 +2219,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           }
                         } else if (value == 'settings') {
                           await _navigateToSettings();
+                        } else if (value == 'fullscreen') {
+                          Platform.instance.toggleFullscreen();
+                          setState(() {});
                         }
                       },
                       itemBuilder: (BuildContext context) => [
@@ -2258,6 +2278,25 @@ class _MyHomePageState extends State<MyHomePage> {
                             });
                           },
                         ),
+                        if (kIsWeb)
+                          PopupMenuItem<String>(
+                            value: 'fullscreen',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Platform.instance.isFullscreen
+                                      ? Icons.fullscreen_exit
+                                      : Icons.fullscreen,
+                                  color: _themeColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(Platform.instance.isFullscreen
+                                    ? 'Exit Fullscreen'
+                                    : 'Fullscreen'),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
               actions: [

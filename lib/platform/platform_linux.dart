@@ -56,5 +56,13 @@ class PlatformLinux implements PlatformInterface {
     // On Linux, we could open the URL in the default browser
     // For now, this is a no-op as the main use case is web
   }
+
+  @override
+  bool get isFullscreen => false;
+
+  @override
+  void toggleFullscreen() {
+    // Not supported on Linux desktop yet
+  }
 }
 

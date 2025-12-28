@@ -57,4 +57,18 @@ class PlatformWeb implements PlatformInterface {
     // Redirect the browser to the specified URL
     html.window.location.href = url;
   }
+
+  @override
+  bool get isFullscreen {
+    return html.document.fullscreenElement != null;
+  }
+
+  @override
+  void toggleFullscreen() {
+    if (isFullscreen) {
+      html.document.exitFullscreen();
+    } else {
+      html.document.documentElement?.requestFullscreen();
+    }
+  }
 }
