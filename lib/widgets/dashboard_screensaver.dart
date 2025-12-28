@@ -722,14 +722,15 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     final timeStr = _formatTime(event.startTimeHour, event.startTimeMinute);
     final hasTime = timeStr.isNotEmpty;
 
-    // Format date for upcoming events (e.g., "Mon 30th")
+    // Format date for upcoming events (e.g., "Thu 1st Jan")
     String? dateStr;
     if (showDate) {
       final eventDate = _parseDate(event.date);
-      final dayFormat = DateFormat('EEE');
+      final dayFormat = DateFormat('EEE'); // Day name (Thu)
+      final monthFormat = DateFormat('MMM'); // Month name (Jan)
       final dayNum = eventDate.day;
       final suffix = _getDaySuffix(dayNum);
-      dateStr = '${dayFormat.format(eventDate)} $dayNum$suffix';
+      dateStr = '${dayFormat.format(eventDate)} $dayNum$suffix ${monthFormat.format(eventDate)}';
     }
 
     return Container(
