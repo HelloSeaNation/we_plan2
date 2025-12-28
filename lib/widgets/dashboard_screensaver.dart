@@ -80,7 +80,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
   // Weather state
   String? _weatherTemp;
   String? _weatherCondition;
-  String? _weatherIcon;
+  String? _weatherCode; // Store weather code for icon lookup
   String? _weatherBackgroundUrl;
   String? _weatherFeelsLike;
   String? _weatherHigh;
@@ -145,7 +145,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
           setState(() {
             _weatherTemp = '${current['temp_C']}°C';
             _weatherCondition = current['weatherDesc'][0]['value'];
-            _weatherIcon = _getWeatherEmoji(weatherCode);
+            _weatherCode = weatherCode; // Store code for icon lookup
             _weatherBackgroundUrl = _getWeatherBackgroundUrl(weatherCode);
             _weatherFeelsLike = current['FeelsLikeC'] != null ? '${current['FeelsLikeC']}°' : null;
             _weatherHigh = maxTemp != null ? '$maxTemp°' : null;
@@ -162,20 +162,37 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     }
   }
 
-  String _getWeatherEmoji(String code) {
+  /// Get weather icon data based on weather code
+  IconData _getWeatherIcon(String code) {
     final weatherCode = int.tryParse(code) ?? 0;
-    if (weatherCode == 113) return '☀️'; // Sunny
-    if (weatherCode == 116) return '⛅'; // Partly cloudy
-    if (weatherCode == 119 || weatherCode == 122) return '☁️'; // Cloudy
-    if (weatherCode >= 176 && weatherCode <= 263) return '🌧️'; // Rain
-    if (weatherCode >= 266 && weatherCode <= 299) return '🌧️'; // Light rain
-    if (weatherCode >= 302 && weatherCode <= 356) return '🌧️'; // Heavy rain
-    if (weatherCode >= 359 && weatherCode <= 395) return '⛈️'; // Thunderstorm
-    if (weatherCode >= 200 && weatherCode <= 232) return '⛈️'; // Thunderstorm
-    if (weatherCode >= 600 && weatherCode <= 622) return '❄️'; // Snow
-    if (weatherCode >= 371 && weatherCode <= 392) return '❄️'; // Snow
-    if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) return '🌫️'; // Fog
-    return '🌤️'; // Default
+    if (weatherCode == 113) return Icons.wb_sunny_rounded; // Sunny
+    if (weatherCode == 116) return Icons.wb_cloudy; // Partly cloudy
+    if (weatherCode == 119 || weatherCode == 122) return Icons.cloud; // Cloudy
+    if (weatherCode >= 176 && weatherCode <= 263) return Icons.grain; // Rain
+    if (weatherCode >= 266 && weatherCode <= 299) return Icons.grain; // Light rain
+    if (weatherCode >= 302 && weatherCode <= 356) return Icons.beach_access; // Heavy rain (umbrella)
+    if (weatherCode >= 359 && weatherCode <= 395) return Icons.thunderstorm; // Thunderstorm
+    if (weatherCode >= 200 && weatherCode <= 232) return Icons.thunderstorm; // Thunderstorm
+    if (weatherCode >= 600 && weatherCode <= 622) return Icons.ac_unit; // Snow
+    if (weatherCode >= 371 && weatherCode <= 392) return Icons.ac_unit; // Snow
+    if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) return Icons.foggy; // Fog
+    return Icons.wb_sunny_rounded; // Default
+
+  }
+
+  /// Get weather icon color based on weather code
+  Color _getWeatherIconColor(String code) {
+    final weatherCode = int.tryParse(code) ?? 0;
+    if (weatherCode == 113) return Colors.amber; // Sunny - yellow
+    if (weatherCode == 116) return Colors.amber[300]!; // Partly cloudy
+    if (weatherCode == 119 || weatherCode == 122) return Colors.grey[400]!; // Cloudy
+    if (weatherCode >= 176 && weatherCode <= 356) return Colors.lightBlue[300]!; // Rain
+    if (weatherCode >= 359 && weatherCode <= 395) return Colors.purple[300]!; // Thunderstorm
+    if (weatherCode >= 200 && weatherCode <= 232) return Colors.purple[300]!; // Thunderstorm
+    if (weatherCode >= 600 && weatherCode <= 622) return Colors.lightBlue[100]!; // Snow
+    if (weatherCode >= 371 && weatherCode <= 392) return Colors.lightBlue[100]!; // Snow
+    if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) return Colors.grey[300]!; // Fog
+    return Colors.amber; // Default
   }
 
   /// Get weather-themed background image URL based on weather code
@@ -537,11 +554,12 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            _weatherIcon ?? '🌤️',
-            style: const TextStyle(fontSize: 32),
+          Icon(
+            _getWeatherIcon(_weatherCode ?? '113'),
+            size: 48,
+            color: _getWeatherIconColor(_weatherCode ?? '113'),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
