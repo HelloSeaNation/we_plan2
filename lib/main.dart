@@ -167,6 +167,8 @@ class Event {
   String toString() => title;
 }
 
+enum CalendarViewMode { month, week }
+
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title, this.isFirstLoad = false});
   final String title;
@@ -190,6 +192,7 @@ class DeletedEventInfo {
 
 class _MyHomePageState extends State<MyHomePage> {
   final CalendarFormat _calendarFormat = CalendarFormat.month;
+  CalendarViewMode _viewMode = CalendarViewMode.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   final Map<String, List<Event>> _events = {};
@@ -2643,6 +2646,11 @@ class _MyHomePageState extends State<MyHomePage> {
     final isLargeScreen =
         Responsive.isDesktop(context) || Responsive.isTablet(context);
 
+    // Show weekly or monthly view based on _viewMode
+    if (_viewMode == CalendarViewMode.week) {
+      return _buildWeeklyCalendarSection();
+    }
+
     // Calculate row height based on available screen height for tablet
     final screenHeight = Responsive.height(context);
     // Subtract: AppBar (48) + header row (~50) + days of week row (~40)
@@ -2663,6 +2671,117 @@ class _MyHomePageState extends State<MyHomePage> {
     return Column(
       mainAxisSize: isLargeScreen ? MainAxisSize.max : MainAxisSize.min,
       children: [
+        // Custom header with view toggle
+        Container(
+          padding: EdgeInsets.symmetric(
+            vertical: isLargeScreen ? 12 : 10,
+            horizontal: isLargeScreen ? 8 : 4,
+          ),
+          decoration: BoxDecoration(
+            color: _themeColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          child: Row(
+            children: [
+              // Previous month button
+              IconButton(
+                icon: Icon(
+                  Icons.chevron_left,
+                  size: isLargeScreen ? 32 : 24,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _focusedDay = DateTime(
+                      _focusedDay.year,
+                      _focusedDay.month - 1,
+                      1,
+                    );
+                    _fetchEventsForVisibleMonth(_focusedDay);
+                  });
+                },
+              ),
+              // Month and year text
+              Expanded(
+                child: Text(
+                  DateFormat('MMMM yyyy').format(_focusedDay),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: headerFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              // Next month button
+              IconButton(
+                icon: Icon(
+                  Icons.chevron_right,
+                  size: isLargeScreen ? 32 : 24,
+                  color: Colors.white,
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  setState(() {
+                    _focusedDay = DateTime(
+                      _focusedDay.year,
+                      _focusedDay.month + 1,
+                      1,
+                    );
+                    _fetchEventsForVisibleMonth(_focusedDay);
+                  });
+                },
+              ),
+              // View toggle button
+              Container(
+                margin: EdgeInsets.only(left: isLargeScreen ? 8 : 4),
+                child: SegmentedButton<CalendarViewMode>(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.white;
+                      }
+                      return Colors.white.withOpacity(0.2);
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return _themeColor;
+                      }
+                      return Colors.white;
+                    }),
+                    side: WidgetStateProperty.all(BorderSide.none),
+                    padding: WidgetStateProperty.all(
+                      EdgeInsets.symmetric(horizontal: isLargeScreen ? 12 : 8),
+                    ),
+                  ),
+                  segments: [
+                    ButtonSegment<CalendarViewMode>(
+                      value: CalendarViewMode.month,
+                      label: Text(
+                        'Month',
+                        style: TextStyle(fontSize: isLargeScreen ? 14 : 11),
+                      ),
+                    ),
+                    ButtonSegment<CalendarViewMode>(
+                      value: CalendarViewMode.week,
+                      label: Text(
+                        'Week',
+                        style: TextStyle(fontSize: isLargeScreen ? 14 : 11),
+                      ),
+                    ),
+                  ],
+                  selected: {_viewMode},
+                  onSelectionChanged: (Set<CalendarViewMode> newSelection) {
+                    setState(() {
+                      _viewMode = newSelection.first;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
         GestureDetector(
           onHorizontalDragEnd: (details) {
             // Swipe right to go to previous month
@@ -2776,32 +2895,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             rowHeight: rowHeight,
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              decoration: BoxDecoration(
-                color: _themeColor,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-              ),
-              titleTextStyle: TextStyle(
-                fontSize: headerFontSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              leftChevronIcon: Icon(
-                Icons.chevron_left,
-                size: isLargeScreen ? 32 : 24,
-                color: Colors.white,
-              ),
-              rightChevronIcon: Icon(
-                Icons.chevron_right,
-                size: isLargeScreen ? 32 : 24,
-                color: Colors.white,
-              ),
-              headerPadding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 8 : 10,
-              ),
-            ),
+            headerVisible: false, // Using custom header with view toggle
 
             // Custom builder to show event titles
             calendarBuilders: CalendarBuilders(
@@ -2946,6 +3040,348 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ],
+    );
+  }
+
+  // Get the start and end dates for the week containing the given date
+  List<DateTime> _getWeekDates(DateTime date) {
+    // Get Monday of the current week (startingDayOfWeek is Monday)
+    final monday = date.subtract(Duration(days: date.weekday - 1));
+    return List.generate(7, (index) => DateTime(
+      monday.year,
+      monday.month,
+      monday.day + index,
+    ));
+  }
+
+  // Navigate to previous week
+  void _previousWeek() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _focusedDay = _focusedDay.subtract(const Duration(days: 7));
+      _fetchEventsForVisibleMonth(_focusedDay);
+    });
+  }
+
+  // Navigate to next week
+  void _nextWeek() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _focusedDay = _focusedDay.add(const Duration(days: 7));
+      _fetchEventsForVisibleMonth(_focusedDay);
+    });
+  }
+
+  // Build the weekly calendar view
+  Widget _buildWeeklyCalendarSection() {
+    final isLargeScreen =
+        Responsive.isDesktop(context) || Responsive.isTablet(context);
+    final headerFontSize = isLargeScreen ? 26.0 : 16.0;
+    final dayFontSize = isLargeScreen ? 18.0 : 12.0;
+    final dateFontSize = isLargeScreen ? 22.0 : 14.0;
+    final eventFontSize = isLargeScreen ? 14.0 : 10.0;
+
+    final weekDates = _getWeekDates(_focusedDay);
+    final weekStart = weekDates.first;
+    final weekEnd = weekDates.last;
+
+    // Format the week range for header
+    final dateFormat = DateFormat('d MMM');
+    final weekRangeText = '${dateFormat.format(weekStart)} - ${dateFormat.format(weekEnd)}, ${weekEnd.year}';
+
+    return Column(
+      mainAxisSize: isLargeScreen ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        // Week header with navigation and view toggle
+        Container(
+          padding: EdgeInsets.symmetric(
+            vertical: isLargeScreen ? 12 : 8,
+            horizontal: isLargeScreen ? 16 : 8,
+          ),
+          decoration: BoxDecoration(
+            color: _themeColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          ),
+          child: Row(
+            children: [
+              // Previous week button
+              IconButton(
+                icon: Icon(
+                  Icons.chevron_left,
+                  size: isLargeScreen ? 32 : 24,
+                  color: Colors.white,
+                ),
+                onPressed: _previousWeek,
+              ),
+              // Week range text
+              Expanded(
+                child: Text(
+                  weekRangeText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: headerFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              // Next week button
+              IconButton(
+                icon: Icon(
+                  Icons.chevron_right,
+                  size: isLargeScreen ? 32 : 24,
+                  color: Colors.white,
+                ),
+                onPressed: _nextWeek,
+              ),
+              // View toggle button
+              Container(
+                margin: EdgeInsets.only(left: isLargeScreen ? 16 : 8),
+                child: SegmentedButton<CalendarViewMode>(
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return Colors.white;
+                      }
+                      return Colors.white.withOpacity(0.2);
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return _themeColor;
+                      }
+                      return Colors.white;
+                    }),
+                    side: WidgetStateProperty.all(BorderSide.none),
+                    padding: WidgetStateProperty.all(
+                      EdgeInsets.symmetric(horizontal: isLargeScreen ? 12 : 8),
+                    ),
+                  ),
+                  segments: [
+                    ButtonSegment<CalendarViewMode>(
+                      value: CalendarViewMode.month,
+                      label: Text(
+                        'Month',
+                        style: TextStyle(fontSize: isLargeScreen ? 14 : 11),
+                      ),
+                    ),
+                    ButtonSegment<CalendarViewMode>(
+                      value: CalendarViewMode.week,
+                      label: Text(
+                        'Week',
+                        style: TextStyle(fontSize: isLargeScreen ? 14 : 11),
+                      ),
+                    ),
+                  ],
+                  selected: {_viewMode},
+                  onSelectionChanged: (Set<CalendarViewMode> newSelection) {
+                    setState(() {
+                      _viewMode = newSelection.first;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Day of week headers
+        Container(
+          decoration: BoxDecoration(
+            color: _themeColor.withOpacity(0.1),
+            border: Border(
+              bottom: BorderSide(color: _themeColor.withOpacity(0.3), width: 2),
+            ),
+          ),
+          child: Row(
+            children: weekDates.map((date) {
+              final isToday = isSameDay(date, DateTime.now());
+              final isSelected = isSameDay(date, _selectedDay);
+              final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+              final dayName = DateFormat('EEE').format(date);
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => _onDaySelected(date, date),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: isLargeScreen ? 12 : 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? _themeColor.withOpacity(0.2)
+                          : isToday
+                              ? _themeColor.withOpacity(0.1)
+                              : null,
+                      border: Border(
+                        left: date.weekday != DateTime.monday
+                            ? BorderSide(color: Colors.grey[300]!, width: 0.5)
+                            : BorderSide.none,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          dayName,
+                          style: TextStyle(
+                            fontSize: dayFontSize,
+                            fontWeight: FontWeight.w700,
+                            color: isWeekend
+                                ? _themeColor.withOpacity(0.5)
+                                : _themeColor.withOpacity(0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: isLargeScreen ? 36 : 28,
+                          height: isLargeScreen ? 36 : 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected
+                                ? _themeColor
+                                : isToday
+                                    ? _themeColor
+                                    : null,
+                            boxShadow: isToday
+                                ? [
+                                    BoxShadow(
+                                      color: _themeColor.withOpacity(0.5),
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: dateFontSize,
+                                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected || isToday
+                                    ? Colors.white
+                                    : isWeekend
+                                        ? Colors.grey[600]
+                                        : const Color(0xFF5A5A5A),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        // Day columns with events
+        Expanded(
+          child: GestureDetector(
+            onHorizontalDragEnd: (details) {
+              // Swipe right to go to previous week
+              if (details.primaryVelocity! > 0) {
+                _previousWeek();
+              }
+              // Swipe left to go to next week
+              else if (details.primaryVelocity! < 0) {
+                _nextWeek();
+              }
+            },
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: weekDates.map((date) {
+                return _buildDayColumn(date, eventFontSize, isLargeScreen);
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Build individual day column for weekly view
+  Widget _buildDayColumn(DateTime date, double eventFontSize, bool isLargeScreen) {
+    final events = _getEventsForDay(date);
+    final isToday = isSameDay(date, DateTime.now());
+    final isSelected = isSameDay(date, _selectedDay);
+    final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onDaySelected(date, date),
+        onDoubleTap: () {
+          _selectedDay = date;
+          _showAddEventDialog();
+        },
+        child: Container(
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? _themeColor.withOpacity(0.08)
+                : isToday
+                    ? _themeColor.withOpacity(0.05)
+                    : isWeekend
+                        ? Colors.grey[100]
+                        : null,
+            border: Border(
+              left: date.weekday != DateTime.monday
+                  ? BorderSide(color: Colors.grey[200]!, width: 0.5)
+                  : BorderSide.none,
+              bottom: BorderSide(color: Colors.grey[300]!, width: 1),
+            ),
+          ),
+          child: events.isEmpty
+              ? Center(
+                  child: Icon(
+                    Icons.add,
+                    size: isLargeScreen ? 24 : 18,
+                    color: Colors.grey[300],
+                  ),
+                )
+              : ListView.builder(
+                  padding: EdgeInsets.all(isLargeScreen ? 6 : 4),
+                  itemCount: events.length,
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    return GestureDetector(
+                      onTap: () => _showEditEventDialog(event),
+                      child: Container(
+                        margin: EdgeInsets.only(bottom: isLargeScreen ? 4 : 2),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isLargeScreen ? 8 : 4,
+                          vertical: isLargeScreen ? 6 : 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: event.color?.withOpacity(0.75) ??
+                              Colors.blue.withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(isLargeScreen ? 6 : 4),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              event.title,
+                              style: TextStyle(
+                                fontSize: eventFontSize,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (event.timeString.isNotEmpty)
+                              Text(
+                                event.timeString,
+                                style: TextStyle(
+                                  fontSize: eventFontSize - 2,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
     );
   }
 
