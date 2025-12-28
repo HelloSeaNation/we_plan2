@@ -30103,7 +30103,7 @@ afs:function afs(a){var _=this
 _.a=!1
 _.b=5
 _.d=_.c=!1
-_.e=60
+_.e=0
 _.r=_.f=""
 _.w=10
 _.x=!1
@@ -30130,7 +30130,7 @@ _.e=_.d=$
 _.r=_.f=!1
 _.w=5
 _.y=_.x=!1
-_.z=60
+_.z=0
 _.Q=a
 _.as=b
 _.at=c
@@ -103379,7 +103379,7 @@ o.c=l===!0
 l=A.eL(J.a5(n.a,"kiosk_screensaver_enabled"))
 o.d=l===!0
 l=A.d2(J.a5(n.a,"kiosk_screensaver_timeout"))
-o.e=l==null?60:l
+o.e=l==null?0:l
 l=A.bt(J.a5(n.a,"kiosk_screensaver_image_url"))
 o.f=l==null?"":l
 l=A.bt(J.a5(n.a,"kiosk_screensaver_folder_path"))
@@ -103439,7 +103439,9 @@ if(r!=null)r.aH(0)
 s.CW=A.cs(A.d7(0,0,0,0,s.b,0),new A.aft(s))},
 Ux(){var s=this,r=s.cx
 if(r!=null)r.aH(0)
-s.cx=A.cs(A.d7(0,0,0,0,0,s.e),new A.afu(s))},
+r=s.e
+if(r===0)return
+s.cx=A.cs(A.d7(0,0,0,0,0,r),new A.afu(s))},
 ao7(){var s,r=this
 if(!r.x||r.at.length===0)return
 r.ax=0
@@ -103558,7 +103560,7 @@ if(s!=null)s.$0()},
 $S:49}
 A.py.prototype={
 af(){var s=$.ax(),r=t.t
-return new A.KM(new A.fU(B.cR,s),new A.fU(B.cR,s),new A.fU(B.cR,s),new A.fU(B.cR,s),A.a([1,2,5,10,15,30],r),A.a([10,30,60],r),A.a([5,10,15,30,60],r),A.a([B.SF,B.H5,B.SC,B.SB,B.SE,B.Ht],t.t_))}}
+return new A.KM(new A.fU(B.cR,s),new A.fU(B.cR,s),new A.fU(B.cR,s),new A.fU(B.cR,s),A.a([1,2,5,10,15,30],r),A.a([0,10,30,60],r),A.a([5,10,15,30,60],r),A.a([B.SF,B.H5,B.SC,B.SB,B.SE,B.Ht],t.t_))}}
 A.KM.prototype={
 ar(){var s,r,q=this
 q.aL()
@@ -104030,7 +104032,7 @@ $1(a){this.a.$1(a)},
 $S:109}
 A.aDn.prototype={
 $1(a){var s=null
-return A.aJR(A.ad(""+a+" sec",s,s,s,s,s,s,s),a,t.S)},
+return A.aJR(A.ad(a===0?"None":""+a+" sec",s,s,s,s,s,s,s),a,t.S)},
 $S:114}
 A.aDo.prototype={
 $1(a){this.a.$1(a)},
