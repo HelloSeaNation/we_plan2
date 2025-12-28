@@ -2580,7 +2580,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // Subtract: AppBar (48) + header row (~50) + days of week row (~40)
     final availableHeight = screenHeight - 138;
     final calculatedRowHeight = isLargeScreen
-        ? (availableHeight / 6) // 6 rows of weeks to fill screen
+        ? (availableHeight / 5) // 5 rows of weeks to fill screen
         : 105.0;
     final rowHeight = calculatedRowHeight; // No clamp - let it fill the screen
 
