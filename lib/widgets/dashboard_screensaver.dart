@@ -82,6 +82,9 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
   String? _weatherCondition;
   String? _weatherIcon;
   String? _weatherBackgroundUrl;
+  String? _weatherFeelsLike;
+  String? _weatherHigh;
+  String? _weatherLow;
   bool _weatherLoading = false;
 
   @override
@@ -133,12 +136,20 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         final current = data['current_condition'][0];
         final weatherCode = current['weatherCode'];
 
+        // Get today's forecast for high/low
+        final forecast = data['weather']?[0];
+        final maxTemp = forecast?['maxtempC'];
+        final minTemp = forecast?['mintempC'];
+
         if (mounted) {
           setState(() {
             _weatherTemp = '${current['temp_C']}°C';
             _weatherCondition = current['weatherDesc'][0]['value'];
             _weatherIcon = _getWeatherEmoji(weatherCode);
             _weatherBackgroundUrl = _getWeatherBackgroundUrl(weatherCode);
+            _weatherFeelsLike = current['FeelsLikeC'] != null ? '${current['FeelsLikeC']}°' : null;
+            _weatherHigh = maxTemp != null ? '$maxTemp°' : null;
+            _weatherLow = minTemp != null ? '$minTemp°' : null;
             _weatherLoading = false;
           });
         }
@@ -539,22 +550,61 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _weatherTemp!,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w300,
-                  color: Colors.white,
-                ),
-              ),
-              if (_weatherCondition != null)
-                Text(
-                  _weatherCondition!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    _weatherTemp!,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
+                  if (_weatherHigh != null && _weatherLow != null) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      '↑$_weatherHigh',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.orange[300],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '↓$_weatherLow',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.lightBlue[300],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              Row(
+                children: [
+                  if (_weatherCondition != null)
+                    Text(
+                      _weatherCondition!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  if (_weatherFeelsLike != null) ...[
+                    Text(
+                      ' · Feels $_weatherFeelsLike',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ],
@@ -645,13 +695,13 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             const SizedBox(height: 20),
           ],
           if (upcomingEvents.isNotEmpty)
-            _buildEventGroup('UPCOMING', upcomingEvents.take(3).toList()),
+            _buildEventGroup('UPCOMING', upcomingEvents.take(3).toList(), showDate: true),
         ],
       ),
     );
   }
 
-  Widget _buildEventGroup(String title, List<CachedEvent> events) {
+  Widget _buildEventGroup(String title, List<CachedEvent> events, {bool showDate = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -666,15 +716,25 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
           ),
         ),
         const SizedBox(height: 8),
-        ...events.take(4).map((event) => _buildEventCard(event)),
+        ...events.take(4).map((event) => _buildEventCard(event, showDate: showDate)),
       ],
     );
   }
 
-  Widget _buildEventCard(CachedEvent event) {
+  Widget _buildEventCard(CachedEvent event, {bool showDate = false}) {
     final eventColor = Color(event.colorValue ?? 0xFF2196F3); // Default to blue
     final timeStr = _formatTime(event.startTimeHour, event.startTimeMinute);
     final hasTime = timeStr.isNotEmpty;
+
+    // Format date for upcoming events (e.g., "Mon 30th")
+    String? dateStr;
+    if (showDate) {
+      final eventDate = _parseDate(event.date);
+      final dayFormat = DateFormat('EEE');
+      final dayNum = eventDate.day;
+      final suffix = _getDaySuffix(dayNum);
+      dateStr = '${dayFormat.format(eventDate)} $dayNum$suffix';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -688,6 +748,25 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
       ),
       child: Row(
         children: [
+          // Date badge for upcoming events
+          if (showDate && dateStr != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                color: widget.accentColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                dateStr,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -731,6 +810,17 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         ],
       ),
     );
+  }
+
+  /// Get ordinal suffix for day number (1st, 2nd, 3rd, 4th, etc.)
+  String _getDaySuffix(int day) {
+    if (day >= 11 && day <= 13) return 'th';
+    switch (day % 10) {
+      case 1: return 'st';
+      case 2: return 'nd';
+      case 3: return 'rd';
+      default: return 'th';
+    }
   }
 }
 
