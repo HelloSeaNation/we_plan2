@@ -17,6 +17,9 @@ class FirestoreService {
   static const MethodChannel _channel =
       MethodChannel('com.makeitsimple.we_plan/calendar_widget');
 
+  /// Number of months after event date before auto-deletion
+  static const int expirationMonths = 6;
+
   static FirebaseFirestore get instance {
     _instance ??= FirebaseFirestore.instanceFor(
       app: Firebase.app(),
@@ -47,6 +50,15 @@ class FirestoreService {
     }
   }
 
+  /// Calculate expiration date (event date + 6 months)
+  static DateTime _calculateExpiresAt(DateTime eventDate) {
+    return DateTime(
+      eventDate.year,
+      eventDate.month + expirationMonths,
+      eventDate.day,
+    );
+  }
+
   static Future<void> addEvent({
     required String title,
     required String description,
@@ -59,6 +71,9 @@ class FirestoreService {
     int? endTimeHour,
     int? endTimeMinute,
   }) async {
+    // Calculate expiration date (event date + 6 months)
+    final expiresAt = _calculateExpiresAt(date);
+
     try {
       final fingerprint = await DeviceFingerprint.generate();
       final prefs = await SharedPreferences.getInstance();
@@ -71,6 +86,7 @@ class FirestoreService {
         'description': description,
         'date': date.toIso8601String(),
         'createdAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(expiresAt), // TTL field for auto-deletion
         'fingerprint': fingerprint,
         'device_name': deviceName,
         'color_value': colorValue,
@@ -91,6 +107,7 @@ class FirestoreService {
         'description': description,
         'date': date.toIso8601String(),
         'createdAt': FieldValue.serverTimestamp(),
+        'expiresAt': Timestamp.fromDate(expiresAt), // TTL field for auto-deletion
         'fingerprint':
             'permission-denied-${DateTime.now().millisecondsSinceEpoch}',
         'platform': Platform.instance.operatingSystem,
@@ -289,6 +306,72 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error updating widget: $e');
+    }
+  }
+
+  /// Migrate existing events to add expiresAt field for TTL auto-deletion
+  /// This should be called once during app startup
+  static Future<void> migrateEventsWithExpiration() async {
+    if (_sharedCollectionId == null) {
+      debugPrint('FirestoreService not initialized, skipping migration');
+      return;
+    }
+
+    try {
+      // Check if migration already done
+      final prefs = await SharedPreferences.getInstance();
+      final migrationKey = 'ttl_migration_${_sharedCollectionId}';
+      if (prefs.getBool(migrationKey) == true) {
+        debugPrint('TTL migration already completed for $_sharedCollectionId');
+        return;
+      }
+
+      debugPrint('Starting TTL migration for $_sharedCollectionId...');
+
+      // Get all events without expiresAt field
+      final snapshot = await instance
+          .collection(_sharedCollectionId!)
+          .get();
+
+      int migratedCount = 0;
+      final batch = instance.batch();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+
+        // Skip if already has expiresAt
+        if (data['expiresAt'] != null) continue;
+
+        // Parse event date
+        final dateStr = data['date'] as String?;
+        if (dateStr == null) continue;
+
+        try {
+          final eventDate = DateTime.parse(dateStr);
+          final expiresAt = _calculateExpiresAt(eventDate);
+
+          batch.update(doc.reference, {
+            'expiresAt': Timestamp.fromDate(expiresAt),
+          });
+          migratedCount++;
+        } catch (e) {
+          debugPrint('Error parsing date for doc ${doc.id}: $e');
+        }
+      }
+
+      // Commit batch update
+      if (migratedCount > 0) {
+        await batch.commit();
+        debugPrint('✅ Migrated $migratedCount events with expiresAt field');
+      } else {
+        debugPrint('No events needed migration');
+      }
+
+      // Mark migration as complete
+      await prefs.setBool(migrationKey, true);
+
+    } catch (e) {
+      debugPrint('Error during TTL migration: $e');
     }
   }
 }

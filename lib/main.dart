@@ -55,6 +55,9 @@ void main() async {
   // Initialize Firebase
   await FirestoreService.initialize(shareCode: shareCode);
 
+  // Migrate existing events to add TTL expiration field (runs once)
+  await FirestoreService.migrateEventsWithExpiration();
+
   // Initialize widget service (will be skipped on web automatically)
   await WidgetService.initializeWidget();
 
