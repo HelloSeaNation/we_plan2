@@ -3304,46 +3304,59 @@ class _MyHomePageState extends State<MyHomePage> {
     final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
 
     return Expanded(
-      child: GestureDetector(
-        onTap: () => _onDaySelected(date, date),
-        onDoubleTap: () {
-          _selectedDay = date;
-          _showAddEventDialog();
-        },
-        child: Container(
-          height: double.infinity,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? _themeColor.withOpacity(0.08)
-                : isToday
-                    ? _themeColor.withOpacity(0.05)
-                    : isWeekend
-                        ? Colors.grey[100]
-                        : null,
-            border: Border(
-              left: date.weekday != DateTime.monday
-                  ? BorderSide(color: Colors.grey[200]!, width: 0.5)
-                  : BorderSide.none,
-              bottom: BorderSide(color: Colors.grey[300]!, width: 1),
-            ),
+      child: Container(
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? _themeColor.withOpacity(0.08)
+              : isToday
+                  ? _themeColor.withOpacity(0.05)
+                  : isWeekend
+                      ? Colors.grey[100]
+                      : null,
+          border: Border(
+            left: date.weekday != DateTime.monday
+                ? BorderSide(color: Colors.grey[200]!, width: 0.5)
+                : BorderSide.none,
+            bottom: BorderSide(color: Colors.grey[300]!, width: 1),
           ),
-          child: events.isEmpty
-              ? Center(
+        ),
+        child: events.isEmpty
+            // Empty day - tap to select, double-tap to add event
+            ? GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _onDaySelected(date, date),
+                onDoubleTap: () {
+                  setState(() {
+                    _selectedDay = date;
+                  });
+                  _showAddEventDialog();
+                },
+                child: Center(
                   child: Icon(
                     Icons.add,
                     size: isLargeScreen ? 24 : 18,
                     color: Colors.grey[300],
                   ),
-                )
-              : ListView.builder(
-                  padding: EdgeInsets.all(isLargeScreen ? 6 : 4),
-                  itemCount: events.length,
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    return GestureDetector(
-                      onTap: () => _showEditEventDialog(event),
-                      child: Container(
-                        margin: EdgeInsets.only(bottom: isLargeScreen ? 4 : 2),
+                ),
+              )
+            // Day with events - list events with individual tap handlers
+            : ListView.builder(
+                padding: EdgeInsets.all(isLargeScreen ? 6 : 4),
+                itemCount: events.length,
+                itemBuilder: (context, index) {
+                  final event = events[index];
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      // Set the selected day to this event's date before editing
+                      setState(() {
+                        _selectedDay = date;
+                      });
+                      _showEditEventDialog(event);
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: isLargeScreen ? 4 : 2),
                         padding: EdgeInsets.symmetric(
                           horizontal: isLargeScreen ? 8 : 4,
                           vertical: isLargeScreen ? 6 : 3,
@@ -3380,7 +3393,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     );
                   },
                 ),
-        ),
       ),
     );
   }
