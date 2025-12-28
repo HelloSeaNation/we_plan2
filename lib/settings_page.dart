@@ -48,7 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
   int _rotationInterval = KioskService.defaultRotationInterval;
 
   final List<int> _timeoutOptions = [1, 2, 5, 10, 15, 30];
-  final List<int> _screensaverTimeoutOptions = [10, 30, 60]; // seconds
+  final List<int> _screensaverTimeoutOptions = [0, 10, 30, 60]; // 0 = none, others in seconds
   final List<int> _rotationOptions = [5, 10, 15, 30, 60]; // seconds
 
   final List<Color> _colorOptions = [
@@ -806,7 +806,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 items: _screensaverTimeoutOptions.map((seconds) {
                   return DropdownMenuItem<int>(
                     value: seconds,
-                    child: Text('$seconds sec'),
+                    child: Text(seconds == 0 ? 'None' : '$seconds sec'),
                   );
                 }).toList(),
                 onChanged: (newValue) {
