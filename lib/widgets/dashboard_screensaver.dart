@@ -340,6 +340,16 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
               ),
             ),
 
+            // Weather widget (top-right corner)
+            if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty)
+              Positioned(
+                top: 40,
+                right: 32,
+                child: SafeArea(
+                  child: _buildWeather(),
+                ),
+              ),
+
             // Tap hint (bottom)
             Positioned(
               bottom: 20,
@@ -368,17 +378,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
             children: [
               _buildClock(),
               const SizedBox(height: 4),
-              // Date and Weather row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _buildDate(),
-                  if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
-                    const SizedBox(width: 32),
-                    _buildWeather(),
-                  ],
-                ],
-              ),
+              _buildDate(),
               const SizedBox(height: 32),
               _buildQuote(),
             ],
@@ -412,10 +412,6 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
         _buildClock(),
         const SizedBox(height: 8),
         _buildDate(),
-        if (widget.weatherLocation != null && widget.weatherLocation!.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          _buildWeather(),
-        ],
         const SizedBox(height: 28),
         _buildQuote(),
         const Spacer(flex: 1),
