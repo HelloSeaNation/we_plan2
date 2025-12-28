@@ -2653,11 +2653,11 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               // Cell styling
               cellAlignment: Alignment.topCenter,
-              // Table borders
-              tableBorder: TableBorder.all(
-                color: Colors.grey[200]!,
-                width: 1,
-                borderRadius: BorderRadius.circular(0),
+              // Table borders - softer look
+              tableBorder: TableBorder(
+                horizontalInside: BorderSide(color: Colors.grey[200]!, width: 0.5),
+                verticalInside: BorderSide(color: Colors.grey[200]!, width: 0.5),
+                bottom: BorderSide(color: Colors.grey[300]!, width: 1),
               ),
               // Marker styling
               markersAutoAligned: false,
@@ -2690,40 +2690,75 @@ class _MyHomePageState extends State<MyHomePage> {
             // Calendar configuration
             daysOfWeekHeight: daysOfWeekHeight,
             daysOfWeekStyle: DaysOfWeekStyle(
+              decoration: BoxDecoration(
+                color: _themeColor.withOpacity(0.1),
+                border: Border(
+                  bottom: BorderSide(color: _themeColor.withOpacity(0.3), width: 2),
+                ),
+              ),
               weekdayStyle: TextStyle(
                 fontSize: isLargeScreen ? 18.0 : 12.0,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+                fontWeight: FontWeight.w700,
+                color: _themeColor.withOpacity(0.8),
               ),
               weekendStyle: TextStyle(
                 fontSize: isLargeScreen ? 18.0 : 12.0,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[500],
+                fontWeight: FontWeight.w700,
+                color: _themeColor.withOpacity(0.5),
               ),
             ),
             rowHeight: rowHeight,
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: true,
+              decoration: BoxDecoration(
+                color: _themeColor,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+              ),
               titleTextStyle: TextStyle(
                 fontSize: headerFontSize,
                 fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
               leftChevronIcon: Icon(
                 Icons.chevron_left,
                 size: isLargeScreen ? 32 : 24,
+                color: Colors.white,
               ),
               rightChevronIcon: Icon(
                 Icons.chevron_right,
                 size: isLargeScreen ? 32 : 24,
+                color: Colors.white,
               ),
               headerPadding: EdgeInsets.symmetric(
-                vertical: isLargeScreen ? 4 : 8,
+                vertical: isLargeScreen ? 8 : 10,
               ),
             ),
 
             // Custom builder to show event titles
             calendarBuilders: CalendarBuilders(
+              // Default builder with weekend highlighting
+              defaultBuilder: (context, date, _) {
+                final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+                return Container(
+                  decoration: BoxDecoration(
+                    color: isWeekend ? Colors.grey[100] : null,
+                  ),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      margin: EdgeInsets.only(top: isLargeScreen ? 4 : 2),
+                      child: Text(
+                        '${date.day}',
+                        style: TextStyle(
+                          color: isWeekend ? Colors.grey[600] : Color(0xFF5A5A5A),
+                          fontSize: fontSize,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
               // Custom selected day builder - circle aligned with number
               selectedBuilder: (context, date, _) {
                 return Align(
@@ -2748,24 +2783,30 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 );
               },
-              // Custom today builder - circle aligned with number
+              // Custom today builder - circle with glow effect
               todayBuilder: (context, date, _) {
                 return Align(
                   alignment: Alignment.topCenter,
                   child: Container(
-                    width: isLargeScreen ? 36 : 28,
-                    height: isLargeScreen ? 36 : 28,
-                    margin: EdgeInsets.only(top: isLargeScreen ? 4 : 2),
+                    width: isLargeScreen ? 40 : 32,
+                    height: isLargeScreen ? 40 : 32,
+                    margin: EdgeInsets.only(top: isLargeScreen ? 2 : 1),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _themeColor.withOpacity(0.3),
-                      border: Border.all(color: _themeColor, width: 2),
+                      color: _themeColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _themeColor.withOpacity(0.5),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Text(
                         '${date.day}',
                         style: TextStyle(
-                          color: Color(0xFF170909),
+                          color: Colors.white,
                           fontSize: fontSize,
                           fontWeight: FontWeight.bold,
                         ),
