@@ -27,7 +27,7 @@ class KioskService {
 
   // Default values
   static const int defaultInactivityTimeout = 5; // minutes
-  static const int defaultScreensaverTimeout = 60; // seconds
+  static const int defaultScreensaverTimeout = 0; // 0 = none, others in seconds
   static const int defaultRotationInterval = 10; // seconds
 
   // State
@@ -213,6 +213,8 @@ class KioskService {
 
   void _resetScreensaverTimer() {
     _screensaverTimer?.cancel();
+    // Don't start timer if timeout is 0 (none)
+    if (_screensaverTimeoutSeconds == 0) return;
     _screensaverTimer = Timer(
       Duration(seconds: _screensaverTimeoutSeconds),
       () {
