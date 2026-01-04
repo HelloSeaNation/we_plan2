@@ -182,9 +182,15 @@ class FirestoreService {
     DateTime day,
   ) async {
     try {
+      // Use range query to handle different date string formats
+      // Query from start of day to end of day
+      final startOfDay = DateTime(day.year, day.month, day.day);
+      final endOfDay = DateTime(day.year, day.month, day.day, 23, 59, 59, 999);
+
       final snapshot = await instance
           .collection(_sharedCollectionId!)
-          .where("date", isEqualTo: day.toIso8601String())
+          .where("date", isGreaterThanOrEqualTo: startOfDay.toIso8601String())
+          .where("date", isLessThanOrEqualTo: endOfDay.toIso8601String())
           .withConverter<Map<String, dynamic>>(
             fromFirestore: (snapshot, _) =>
                 snapshot.data()!..['id'] = snapshot.id,
