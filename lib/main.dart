@@ -2510,6 +2510,20 @@ class _MyHomePageState extends State<MyHomePage> {
                   }
                   // For mobile, use stacked layout
                   else {
+                    // In weekly view, calendar takes most space (events shown in day columns)
+                    // In monthly view, calendar is compact with events section below
+                    if (_viewMode == CalendarViewMode.week) {
+                      return Column(
+                        children: [
+                          Expanded(child: _buildCalendarSection()),
+                          // Show compact events section for selected day
+                          Container(
+                            height: 120,
+                            child: _buildEventsSection(),
+                          ),
+                        ],
+                      );
+                    }
                     return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -3090,7 +3104,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final weekRangeText = '${dateFormat.format(weekStart)} - ${dateFormat.format(weekEnd)}, ${weekEnd.year}';
 
     return Column(
-      mainAxisSize: isLargeScreen ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       children: [
         // Week header with navigation and view toggle
         Container(
