@@ -51,6 +51,20 @@ class _SettingsPageState extends State<SettingsPage> {
   final List<int> _screensaverTimeoutOptions = [0, 10, 30, 60]; // 0 = none, others in seconds
   final List<int> _rotationOptions = [5, 10, 15, 30, 60]; // seconds
 
+  // Default screensaver images (high-quality nature/landscape images from Unsplash)
+  static const List<String> _defaultScreensaverImages = [
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80', // Mountains
+    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920&q=80', // Foggy forest
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80', // Sunlit forest
+    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80', // Beach
+    'https://images.unsplash.com/photo-1518173946687-a4c036bc1e9e?w=1920&q=80', // Lavender field
+    'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=1920&q=80', // Mountain lake
+    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1920&q=80', // Valley
+    'https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=1920&q=80', // Forest path
+    'https://images.unsplash.com/photo-1505765050516-f72dcac9c60e?w=1920&q=80', // Autumn forest
+    'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1920&q=80', // Green hills
+  ];
+
   final List<Color> _colorOptions = [
     Colors.orange,
     const Color(0xFF27B174),
@@ -1251,6 +1265,33 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              // Use default images button
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _screensaverFolderPathController.text =
+                          _defaultScreensaverImages.join(', ');
+                    });
+                  },
+                  icon: Icon(Icons.photo_library_outlined, color: _selectedColor),
+                  label: Text(
+                    'Use Default Images (10 nature photos)',
+                    style: TextStyle(color: _selectedColor),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: _selectedColor),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
 
