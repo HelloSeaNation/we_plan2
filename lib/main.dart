@@ -40,7 +40,13 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   Hive.registerAdapter(CachedEventAdapter());
-  await Hive.openBox<CachedEvent>('events');
+  try {
+    await Hive.openBox<CachedEvent>('events');
+  } catch (_) {
+    // Clear corrupted cache from schema change and re-open
+    await Hive.deleteBoxFromDisk('events');
+    await Hive.openBox<CachedEvent>('events');
+  }
 
   // Load preferences
   final prefs = await SharedPreferences.getInstance();
