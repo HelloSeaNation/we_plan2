@@ -822,11 +822,14 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     }
   }
 
-  /// Format time from hour and minute
-  String _formatTime(int? hour, int? minute) {
-    if (hour == null) return '';
+  /// Format time from "HH:mm" string
+  String _formatTime(String? time) {
+    if (time == null) return '';
+    final parts = time.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
     final h = hour % 12 == 0 ? 12 : hour % 12;
-    final m = (minute ?? 0).toString().padLeft(2, '0');
+    final m = minute.toString().padLeft(2, '0');
     final period = hour < 12 ? 'AM' : 'PM';
     return '$h:$m $period';
   }
@@ -924,7 +927,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
 
   Widget _buildEventCard(CachedEvent event, {bool showDate = false}) {
     final eventColor = Color(event.colorValue ?? 0xFF2196F3); // Default to blue
-    final timeStr = _formatTime(event.startTimeHour, event.startTimeMinute);
+    final timeStr = _formatTime(event.startTime);
     final hasTime = timeStr.isNotEmpty;
 
     // Format date for upcoming events (e.g., "Thu 1st Jan")
