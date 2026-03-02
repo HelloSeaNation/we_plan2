@@ -163,13 +163,34 @@ class Event {
   }
 
   String _formatTime(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
     final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
   }
 
   @override
   String toString() => title;
+}
+
+/// Format TimeOfDay to "h:mm AM/PM" string for storage
+String formatTimeForStorage(TimeOfDay time) {
+  final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+  final minute = time.minute.toString().padLeft(2, '0');
+  final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+  return '$hour:$minute $period';
+}
+
+/// Parse "h:mm AM/PM" string back to TimeOfDay
+TimeOfDay parseStoredTime(String time) {
+  final parts = time.split(' ');
+  final timeParts = parts[0].split(':');
+  var hour = int.parse(timeParts[0]);
+  final minute = int.parse(timeParts[1]);
+  final isPM = parts[1] == 'PM';
+  if (isPM && hour != 12) hour += 12;
+  if (!isPM && hour == 12) hour = 0;
+  return TimeOfDay(hour: hour, minute: minute);
 }
 
 enum CalendarViewMode { month, week }
@@ -469,12 +490,8 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: event.fingerprint,
           deviceName: event.deviceName,
           colorValue: event.color?.value,
-          startTime: event.startTime != null
-              ? '${event.startTime!.hour.toString().padLeft(2, '0')}:${event.startTime!.minute.toString().padLeft(2, '0')}'
-              : null,
-          endTime: event.endTime != null
-              ? '${event.endTime!.hour.toString().padLeft(2, '0')}:${event.endTime!.minute.toString().padLeft(2, '0')}'
-              : null,
+          startTime: event.startTime != null ? formatTimeForStorage(event.startTime!) : null,
+          endTime: event.endTime != null ? formatTimeForStorage(event.endTime!) : null,
         ));
       }
     }
@@ -1313,7 +1330,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }) {
     final hasTime = time != null;
     final displayText = hasTime
-        ? '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'
+        ? '${time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod}:${time.minute.toString().padLeft(2, '0')} ${time.period == DayPeriod.am ? 'AM' : 'PM'}'
         : 'Optional';
 
     return InkWell(
@@ -1394,12 +1411,8 @@ class _MyHomePageState extends State<MyHomePage> {
       fingerprint: fingerprint,
       deviceName: deviceName,
       colorValue: colorValue,
-      startTime: event.startTime != null
-          ? '${event.startTime!.hour.toString().padLeft(2, '0')}:${event.startTime!.minute.toString().padLeft(2, '0')}'
-          : null,
-      endTime: event.endTime != null
-          ? '${event.endTime!.hour.toString().padLeft(2, '0')}:${event.endTime!.minute.toString().padLeft(2, '0')}'
-          : null,
+      startTime: event.startTime != null ? formatTimeForStorage(event.startTime!) : null,
+      endTime: event.endTime != null ? formatTimeForStorage(event.endTime!) : null,
     );
 
     if (_isOnline) {
@@ -1411,12 +1424,8 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: fingerprint,
           deviceName: deviceName,
           colorValue: colorValue,
-          startTime: event.startTime != null
-              ? '${event.startTime!.hour.toString().padLeft(2, '0')}:${event.startTime!.minute.toString().padLeft(2, '0')}'
-              : null,
-          endTime: event.endTime != null
-              ? '${event.endTime!.hour.toString().padLeft(2, '0')}:${event.endTime!.minute.toString().padLeft(2, '0')}'
-              : null,
+          startTime: event.startTime != null ? formatTimeForStorage(event.startTime!) : null,
+          endTime: event.endTime != null ? formatTimeForStorage(event.endTime!) : null,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Event added successfully!")),
@@ -1496,18 +1505,8 @@ class _MyHomePageState extends State<MyHomePage> {
               fingerprint: e.fingerprint,
               deviceName: e.deviceName,
               color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
-              startTime: e.startTime != null
-                  ? TimeOfDay(
-                      hour: int.parse(e.startTime!.split(':')[0]),
-                      minute: int.parse(e.startTime!.split(':')[1]),
-                    )
-                  : null,
-              endTime: e.endTime != null
-                  ? TimeOfDay(
-                      hour: int.parse(e.endTime!.split(':')[0]),
-                      minute: int.parse(e.endTime!.split(':')[1]),
-                    )
-                  : null,
+              startTime: e.startTime != null ? parseStoredTime(e.startTime!) : null,
+              endTime: e.endTime != null ? parseStoredTime(e.endTime!) : null,
             ),
           )
           .toList();
@@ -1548,18 +1547,8 @@ class _MyHomePageState extends State<MyHomePage> {
           color: data['color_value'] != null
               ? Color(data['color_value'])
               : Colors.blue,
-          startTime: data['startTime'] != null
-              ? TimeOfDay(
-                  hour: int.parse(data['startTime'].split(':')[0]),
-                  minute: int.parse(data['startTime'].split(':')[1]),
-                )
-              : null,
-          endTime: data['endTime'] != null
-              ? TimeOfDay(
-                  hour: int.parse(data['endTime'].split(':')[0]),
-                  minute: int.parse(data['endTime'].split(':')[1]),
-                )
-              : null,
+          startTime: data['startTime'] != null ? parseStoredTime(data['startTime']) : null,
+          endTime: data['endTime'] != null ? parseStoredTime(data['endTime']) : null,
         );
         events.add(event);
 
@@ -1735,18 +1724,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 fingerprint: e.fingerprint,
                 deviceName: e.deviceName,
                 color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
-                startTime: e.startTime != null
-                    ? TimeOfDay(
-                        hour: int.parse(e.startTime!.split(':')[0]),
-                        minute: int.parse(e.startTime!.split(':')[1]),
-                      )
-                    : null,
-                endTime: e.endTime != null
-                    ? TimeOfDay(
-                        hour: int.parse(e.endTime!.split(':')[0]),
-                        minute: int.parse(e.endTime!.split(':')[1]),
-                      )
-                    : null,
+                startTime: e.startTime != null ? parseStoredTime(e.startTime!) : null,
+                endTime: e.endTime != null ? parseStoredTime(e.endTime!) : null,
               ))
           .toList();
       if (cachedEvents.isNotEmpty) {
@@ -1781,18 +1760,8 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: data['fingerprint'],
           deviceName: data['device_name'],
           color: data['color_value'] != null ? Color(data['color_value']) : Colors.blue,
-          startTime: data['startTime'] != null
-              ? TimeOfDay(
-                  hour: int.parse(data['startTime'].split(':')[0]),
-                  minute: int.parse(data['startTime'].split(':')[1]),
-                )
-              : null,
-          endTime: data['endTime'] != null
-              ? TimeOfDay(
-                  hour: int.parse(data['endTime'].split(':')[0]),
-                  minute: int.parse(data['endTime'].split(':')[1]),
-                )
-              : null,
+          startTime: data['startTime'] != null ? parseStoredTime(data['startTime']) : null,
+          endTime: data['endTime'] != null ? parseStoredTime(data['endTime']) : null,
         );
 
         fetchedEventsMap.putIfAbsent(dayKey, () => []).add(event);

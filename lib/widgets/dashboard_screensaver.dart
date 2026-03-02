@@ -822,7 +822,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     }
   }
 
-  /// Format time from "HH:mm" string
+  /// Display stored time string (already in "h:mm AM/PM" format)
   String _formatTime(String? time) {
     if (time == null) return '';
     return time;
