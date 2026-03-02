@@ -825,13 +825,7 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
   /// Format time from "HH:mm" string
   String _formatTime(String? time) {
     if (time == null) return '';
-    final parts = time.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-    final h = hour % 12 == 0 ? 12 : hour % 12;
-    final m = minute.toString().padLeft(2, '0');
-    final period = hour < 12 ? 'AM' : 'PM';
-    return '$h:$m $period';
+    return time;
   }
 
   Widget _buildEventsSection() {
