@@ -464,10 +464,12 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: event.fingerprint,
           deviceName: event.deviceName,
           colorValue: event.color?.value,
-          startTimeHour: event.startTime?.hour,
-          startTimeMinute: event.startTime?.minute,
-          endTimeHour: event.endTime?.hour,
-          endTimeMinute: event.endTime?.minute,
+          startTime: event.startTime != null
+              ? '${event.startTime!.hour.toString().padLeft(2, '0')}:${event.startTime!.minute.toString().padLeft(2, '0')}'
+              : null,
+          endTime: event.endTime != null
+              ? '${event.endTime!.hour.toString().padLeft(2, '0')}:${event.endTime!.minute.toString().padLeft(2, '0')}'
+              : null,
         ));
       }
     }
@@ -1387,10 +1389,12 @@ class _MyHomePageState extends State<MyHomePage> {
       fingerprint: fingerprint,
       deviceName: deviceName,
       colorValue: colorValue,
-      startTimeHour: event.startTime?.hour,
-      startTimeMinute: event.startTime?.minute,
-      endTimeHour: event.endTime?.hour,
-      endTimeMinute: event.endTime?.minute,
+      startTime: event.startTime != null
+          ? '${event.startTime!.hour.toString().padLeft(2, '0')}:${event.startTime!.minute.toString().padLeft(2, '0')}'
+          : null,
+      endTime: event.endTime != null
+          ? '${event.endTime!.hour.toString().padLeft(2, '0')}:${event.endTime!.minute.toString().padLeft(2, '0')}'
+          : null,
     );
 
     if (_isOnline) {
@@ -1402,10 +1406,12 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: fingerprint,
           deviceName: deviceName,
           colorValue: colorValue,
-          startTimeHour: event.startTime?.hour,
-          startTimeMinute: event.startTime?.minute,
-          endTimeHour: event.endTime?.hour,
-          endTimeMinute: event.endTime?.minute,
+          startTime: event.startTime != null
+              ? '${event.startTime!.hour.toString().padLeft(2, '0')}:${event.startTime!.minute.toString().padLeft(2, '0')}'
+              : null,
+          endTime: event.endTime != null
+              ? '${event.endTime!.hour.toString().padLeft(2, '0')}:${event.endTime!.minute.toString().padLeft(2, '0')}'
+              : null,
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Event added successfully!")),
@@ -1485,14 +1491,17 @@ class _MyHomePageState extends State<MyHomePage> {
               fingerprint: e.fingerprint,
               deviceName: e.deviceName,
               color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
-              startTime: e.startTimeHour != null && e.startTimeMinute != null
+              startTime: e.startTime != null
                   ? TimeOfDay(
-                      hour: e.startTimeHour!,
-                      minute: e.startTimeMinute!,
+                      hour: int.parse(e.startTime!.split(':')[0]),
+                      minute: int.parse(e.startTime!.split(':')[1]),
                     )
                   : null,
-              endTime: e.endTimeHour != null && e.endTimeMinute != null
-                  ? TimeOfDay(hour: e.endTimeHour!, minute: e.endTimeMinute!)
+              endTime: e.endTime != null
+                  ? TimeOfDay(
+                      hour: int.parse(e.endTime!.split(':')[0]),
+                      minute: int.parse(e.endTime!.split(':')[1]),
+                    )
                   : null,
             ),
           )
@@ -1534,19 +1543,16 @@ class _MyHomePageState extends State<MyHomePage> {
           color: data['color_value'] != null
               ? Color(data['color_value'])
               : Colors.blue,
-          startTime:
-              data['start_time_hour'] != null &&
-                  data['start_time_minute'] != null
+          startTime: data['startTime'] != null
               ? TimeOfDay(
-                  hour: data['start_time_hour'],
-                  minute: data['start_time_minute'],
+                  hour: int.parse(data['startTime'].split(':')[0]),
+                  minute: int.parse(data['startTime'].split(':')[1]),
                 )
               : null,
-          endTime:
-              data['end_time_hour'] != null && data['end_time_minute'] != null
+          endTime: data['endTime'] != null
               ? TimeOfDay(
-                  hour: data['end_time_hour'],
-                  minute: data['end_time_minute'],
+                  hour: int.parse(data['endTime'].split(':')[0]),
+                  minute: int.parse(data['endTime'].split(':')[1]),
                 )
               : null,
         );
@@ -1560,10 +1566,8 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: data['fingerprint'],
           deviceName: data['device_name'],
           colorValue: data['color_value'],
-          startTimeHour: data['start_time_hour'],
-          startTimeMinute: data['start_time_minute'],
-          endTimeHour: data['end_time_hour'],
-          endTimeMinute: data['end_time_minute'],
+          startTime: data['startTime'],
+          endTime: data['endTime'],
         );
         await eventsBox.put(data['id'], cached);
       }
@@ -1726,11 +1730,17 @@ class _MyHomePageState extends State<MyHomePage> {
                 fingerprint: e.fingerprint,
                 deviceName: e.deviceName,
                 color: e.colorValue != null ? Color(e.colorValue!) : Colors.blue,
-                startTime: e.startTimeHour != null && e.startTimeMinute != null
-                    ? TimeOfDay(hour: e.startTimeHour!, minute: e.startTimeMinute!)
+                startTime: e.startTime != null
+                    ? TimeOfDay(
+                        hour: int.parse(e.startTime!.split(':')[0]),
+                        minute: int.parse(e.startTime!.split(':')[1]),
+                      )
                     : null,
-                endTime: e.endTimeHour != null && e.endTimeMinute != null
-                    ? TimeOfDay(hour: e.endTimeHour!, minute: e.endTimeMinute!)
+                endTime: e.endTime != null
+                    ? TimeOfDay(
+                        hour: int.parse(e.endTime!.split(':')[0]),
+                        minute: int.parse(e.endTime!.split(':')[1]),
+                      )
                     : null,
               ))
           .toList();
@@ -1766,11 +1776,17 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: data['fingerprint'],
           deviceName: data['device_name'],
           color: data['color_value'] != null ? Color(data['color_value']) : Colors.blue,
-          startTime: data['start_time_hour'] != null && data['start_time_minute'] != null
-              ? TimeOfDay(hour: data['start_time_hour'], minute: data['start_time_minute'])
+          startTime: data['startTime'] != null
+              ? TimeOfDay(
+                  hour: int.parse(data['startTime'].split(':')[0]),
+                  minute: int.parse(data['startTime'].split(':')[1]),
+                )
               : null,
-          endTime: data['end_time_hour'] != null && data['end_time_minute'] != null
-              ? TimeOfDay(hour: data['end_time_hour'], minute: data['end_time_minute'])
+          endTime: data['endTime'] != null
+              ? TimeOfDay(
+                  hour: int.parse(data['endTime'].split(':')[0]),
+                  minute: int.parse(data['endTime'].split(':')[1]),
+                )
               : null,
         );
 
@@ -1785,10 +1801,8 @@ class _MyHomePageState extends State<MyHomePage> {
           fingerprint: data['fingerprint'],
           deviceName: data['device_name'],
           colorValue: data['color_value'],
-          startTimeHour: data['start_time_hour'],
-          startTimeMinute: data['start_time_minute'],
-          endTimeHour: data['end_time_hour'],
-          endTimeMinute: data['end_time_minute'],
+          startTime: data['startTime'],
+          endTime: data['endTime'],
         );
         await eventsBox.put(data['id'], cached);
       }

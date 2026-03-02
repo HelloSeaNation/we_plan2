@@ -66,10 +66,8 @@ class FirestoreService {
     String? fingerprint,
     String? deviceName,
     int? colorValue,
-    int? startTimeHour,
-    int? startTimeMinute,
-    int? endTimeHour,
-    int? endTimeMinute,
+    String? startTime,
+    String? endTime,
   }) async {
     // Calculate expiration date (event date + 6 months)
     final expiresAt = _calculateExpiresAt(date);
@@ -91,10 +89,8 @@ class FirestoreService {
         'device_name': deviceName,
         'color_value': colorValue,
         'platform': Platform.instance.operatingSystem,
-        'start_time_hour': startTimeHour,
-        'start_time_minute': startTimeMinute,
-        'end_time_hour': endTimeHour,
-        'end_time_minute': endTimeMinute,
+        'startTime': startTime,
+        'endTime': endTime,
       });
 
       // Update widget after adding an event
@@ -112,10 +108,8 @@ class FirestoreService {
             'permission-denied-${DateTime.now().millisecondsSinceEpoch}',
         'platform': Platform.instance.operatingSystem,
         'device_name': fallbackName,
-        'start_time_hour': startTimeHour,
-        'start_time_minute': startTimeMinute,
-        'end_time_hour': endTimeHour,
-        'end_time_minute': endTimeMinute,
+        'startTime': startTime,
+        'endTime': endTime,
       });
 
       // Update widget even in fallback case
