@@ -141,6 +141,8 @@ class FirestoreService {
     required String newTitle,
     required String newDescription,
     required DateTime date,
+    String? newStartTime,
+    String? newEndTime,
   }) async {
     final fingerprint = await DeviceFingerprint.generate();
 
@@ -155,6 +157,8 @@ class FirestoreService {
       await doc.reference.update({
         'title': newTitle,
         'description': newDescription,
+        'startTime': newStartTime,
+        'endTime': newEndTime,
         'lastModified': FieldValue.serverTimestamp(),
         'modifiedBy': fingerprint, // Track who modified
       });
