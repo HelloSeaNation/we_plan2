@@ -669,6 +669,8 @@ class _MyHomePageState extends State<MyHomePage> {
               newTitle: action.data['newTitle'],
               newDescription: action.data['newDescription'],
               date: DateTime.parse(action.data['date']),
+              newStartTime: action.data['newStartTime'],
+              newEndTime: action.data['newEndTime'],
             );
             break;
           case ActionType.delete:
@@ -846,6 +848,12 @@ class _MyHomePageState extends State<MyHomePage> {
       text: oldEvent.description,
     );
 
+    // Editable start/end time, seeded from the existing event
+    TimeOfDay? startTime = oldEvent.startTime;
+    TimeOfDay? endTime = oldEvent.endTime;
+    final bool isLargeScreen =
+        Responsive.isDesktop(context) || Responsive.isTablet(context);
+
     // Calculate responsive dialog width based on screen size
     final dialogWidth = Responsive.getResponsiveValue(
       context: context,
@@ -857,7 +865,8 @@ class _MyHomePageState extends State<MyHomePage> {
     showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => Center(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Center(
         child: Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -944,6 +953,52 @@ class _MyHomePageState extends State<MyHomePage> {
                           cursorColor: _themeColor,
                         ),
                         const SizedBox(height: 16),
+                        // Time selection row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildTimeSelector(
+                                context: context,
+                                label: 'Start Time',
+                                time: startTime,
+                                isLargeScreen: isLargeScreen,
+                                onTap: () async {
+                                  final picked = await showTimePicker(
+                                    context: context,
+                                    initialTime: startTime ?? TimeOfDay.now(),
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() => startTime = picked);
+                                  }
+                                },
+                                onClear: () =>
+                                    setDialogState(() => startTime = null),
+                              ),
+                            ),
+                            SizedBox(width: isLargeScreen ? 16 : 12),
+                            Expanded(
+                              child: _buildTimeSelector(
+                                context: context,
+                                label: 'End Time',
+                                time: endTime,
+                                isLargeScreen: isLargeScreen,
+                                onTap: () async {
+                                  final picked = await showTimePicker(
+                                    context: context,
+                                    initialTime:
+                                        endTime ?? startTime ?? TimeOfDay.now(),
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() => endTime = picked);
+                                  }
+                                },
+                                onClear: () =>
+                                    setDialogState(() => endTime = null),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
@@ -971,6 +1026,13 @@ class _MyHomePageState extends State<MyHomePage> {
                             if (_selectedDay == null || newTitle.isEmpty)
                               return;
 
+                            final String? startTimeStr = startTime != null
+                                ? formatTimeForStorage(startTime!)
+                                : null;
+                            final String? endTimeStr = endTime != null
+                                ? formatTimeForStorage(endTime!)
+                                : null;
+
                             final newEvent = Event(
                               id: oldEvent.id,
                               title: newTitle,
@@ -978,6 +1040,8 @@ class _MyHomePageState extends State<MyHomePage> {
                               fingerprint: oldEvent.fingerprint,
                               deviceName: oldEvent.deviceName,
                               color: oldEvent.color,
+                              startTime: startTime,
+                              endTime: endTime,
                             );
 
                             // Close the edit dialog
@@ -1010,7 +1074,9 @@ class _MyHomePageState extends State<MyHomePage> {
                               final cached = eventsBox.get(key);
                               cached!
                                 ..title = newTitle
-                                ..description = newDesc;
+                                ..description = newDesc
+                                ..startTime = startTimeStr
+                                ..endTime = endTimeStr;
                               await cached.save();
                             }
 
@@ -1022,10 +1088,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   newTitle: newTitle,
                                   newDescription: newDesc,
                                   date: _selectedDay!,
+                                  newStartTime: startTimeStr,
+                                  newEndTime: endTimeStr,
                                 );
-                                Navigator.of(
-                                  context,
-                                ).pop(true); // Pass 'true' to indicate success
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -1047,6 +1112,8 @@ class _MyHomePageState extends State<MyHomePage> {
                                     'newTitle': newTitle,
                                     'newDescription': newDesc,
                                     'date': _selectedDay!.toIso8601String(),
+                                    'newStartTime': startTimeStr,
+                                    'newEndTime': endTimeStr,
                                   },
                                 ),
                               );
@@ -1076,6 +1143,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );
