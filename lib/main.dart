@@ -387,15 +387,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // Called when kiosk inactivity timeout is reached
-  void _onKioskInactivityTimeout() {
+  // Reset the calendar back to today's date (used by kiosk inactivity
+  // timeout and when the screensaver activates).
+  void _returnToToday() {
     if (!mounted) return;
 
-    // Return to today's date
-    final today = DateTime(
-      DateTime.now().year,
-      DateTime.now().month,
-      DateTime.now().day,
-    );
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     setState(() {
       _selectedDay = today;
@@ -404,6 +402,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _fetchEventsFromFirestore(today);
     _fetchEventsForVisibleMonth(today);
+  }
+
+  void _onKioskInactivityTimeout() {
+    if (!mounted) return;
+
+    _returnToToday();
 
     debugPrint('Kiosk: Auto-returned to today');
   }
@@ -411,6 +415,10 @@ class _MyHomePageState extends State<MyHomePage> {
   // Screensaver callbacks
   void _onScreensaverActivate() {
     if (!mounted) return;
+
+    // Reset the calendar to today so dismissing the screensaver doesn't
+    // leave the user on a previously-selected date.
+    _returnToToday();
 
     // If Dashboard mode is enabled, navigate to custom dashboard
     if (_useDashboard) {
