@@ -561,6 +561,10 @@ class _MyHomePageState extends State<MyHomePage> {
     final currentName = await _getDeviceName();
     final currentColor = await _getDeviceColor();
 
+    // Pause kiosk timers so the screensaver can't activate while the user
+    // is configuring settings.
+    _kioskService.stopTimers();
+
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
@@ -587,6 +591,12 @@ class _MyHomePageState extends State<MyHomePage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Settings saved!')));
+    }
+
+    // Resume kiosk timers after returning from settings (idempotent with
+    // any restart done by _reloadKioskSettings).
+    if (_kioskService.isEnabled) {
+      _kioskService.startTimers();
     }
   }
 
