@@ -46,7 +46,6 @@ class _SettingsPageState extends State<SettingsPage> {
       TextEditingController();
   final TextEditingController _dakboardUrlController = TextEditingController();
   final TextEditingController _weatherLocationController = TextEditingController();
-  final FocusNode _weatherLocationFocusNode = FocusNode();
   Timer? _locationSearchDebounce;
   bool _useFolder = false;
   bool _useDakboard = false;
@@ -119,7 +118,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _screensaverFolderPathController.dispose();
     _dakboardUrlController.dispose();
     _weatherLocationController.dispose();
-    _weatherLocationFocusNode.dispose();
     _locationSearchDebounce?.cancel();
     super.dispose();
   }
@@ -1512,19 +1510,22 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 16),
                     Autocomplete<String>(
-                      textEditingController: _weatherLocationController,
-                      focusNode: _weatherLocationFocusNode,
+                      initialValue:
+                          TextEditingValue(text: _weatherLocationController.text),
                       optionsBuilder: (value) =>
                           _weatherLocationOptions(value.text),
                       onSelected: (selection) {
                         _weatherLocationController.text = selection;
-                        _weatherLocationFocusNode.unfocus();
+                        FocusScope.of(context).unfocus();
                       },
                       fieldViewBuilder:
                           (context, controller, focusNode, onFieldSubmitted) {
                             return TextField(
                               controller: controller,
                               focusNode: focusNode,
+                              onChanged: (value) {
+                                _weatherLocationController.text = value;
+                              },
                               onSubmitted: (_) => onFieldSubmitted(),
                               decoration: InputDecoration(
                                 labelText: 'Weather Location (optional)',
