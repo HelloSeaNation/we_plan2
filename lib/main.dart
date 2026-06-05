@@ -447,8 +447,8 @@ class _MyHomePageState extends State<MyHomePage> {
           if (_isKioskEnabled) {
             _kioskService.onUserActivity();
           }
-          // Force rebuild to restore calendar UI
-          setState(() {});
+          // Return to today's date and rebuild the calendar UI
+          _returnToToday();
           debugPrint('Returned from Dashboard screensaver');
         }
       });
@@ -468,8 +468,8 @@ class _MyHomePageState extends State<MyHomePage> {
           if (_isKioskEnabled) {
             _kioskService.onUserActivity();
           }
-          // Force rebuild to restore calendar UI
-          setState(() {});
+          // Return to today's date and rebuild the calendar UI
+          _returnToToday();
           debugPrint('Returned from Dakboard screensaver');
         }
       });
@@ -514,6 +514,8 @@ class _MyHomePageState extends State<MyHomePage> {
   void _onScreensaverDeactivate() {
     if (!mounted) return;
     setState(() => _isScreensaverActive = false);
+    // Refresh back to today's date when leaving the screensaver.
+    _returnToToday();
   }
 
   // Reload kiosk settings (called after returning from settings)
