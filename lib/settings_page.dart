@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'share_setup_screen.dart';
 
@@ -42,6 +46,8 @@ class _SettingsPageState extends State<SettingsPage> {
       TextEditingController();
   final TextEditingController _dakboardUrlController = TextEditingController();
   final TextEditingController _weatherLocationController = TextEditingController();
+  final FocusNode _weatherLocationFocusNode = FocusNode();
+  Timer? _locationSearchDebounce;
   bool _useFolder = false;
   bool _useDakboard = false;
   bool _useDashboard = false;
@@ -113,7 +119,58 @@ class _SettingsPageState extends State<SettingsPage> {
     _screensaverFolderPathController.dispose();
     _dakboardUrlController.dispose();
     _weatherLocationController.dispose();
+    _weatherLocationFocusNode.dispose();
+    _locationSearchDebounce?.cancel();
     super.dispose();
+  }
+
+  /// Search cities matching [query] via the free Open-Meteo geocoding API
+  /// (no API key required). Returns "City, Region, Country" labels.
+  Future<List<String>> _searchLocations(String query) async {
+    try {
+      final url = Uri.parse(
+        'https://geocoding-api.open-meteo.com/v1/search'
+        '?name=${Uri.encodeComponent(query)}&count=8&language=en&format=json',
+      );
+      final res = await http.get(url);
+      if (res.statusCode != 200) return const [];
+
+      final data = json.decode(res.body) as Map<String, dynamic>;
+      final results = (data['results'] as List?) ?? const [];
+
+      final seen = <String>{};
+      final out = <String>[];
+      for (final r in results) {
+        final name = (r['name'] as String?)?.trim() ?? '';
+        final admin1 = (r['admin1'] as String?)?.trim() ?? '';
+        final country = (r['country'] as String?)?.trim() ?? '';
+        // Skip the region when it just repeats the city name (e.g. Auckland).
+        final label = [
+          name,
+          if (admin1.isNotEmpty && admin1 != name) admin1,
+          country,
+        ].where((e) => e.isNotEmpty).join(', ');
+        if (label.isNotEmpty && seen.add(label)) out.add(label);
+      }
+      return out;
+    } catch (e) {
+      debugPrint('Error searching locations: $e');
+      return const [];
+    }
+  }
+
+  /// Debounced options builder for the weather location autocomplete.
+  Future<Iterable<String>> _weatherLocationOptions(String text) {
+    final query = text.trim();
+    if (query.length < 2) return Future.value(const <String>[]);
+
+    _locationSearchDebounce?.cancel();
+    final completer = Completer<List<String>>();
+    _locationSearchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      final results = await _searchLocations(query);
+      if (!completer.isCompleted) completer.complete(results);
+    });
+    return completer.future;
   }
 
   Future<void> _saveSettings() async {
@@ -1454,18 +1511,65 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: _weatherLocationController,
-                      decoration: InputDecoration(
-                        labelText: 'Weather Location (optional)',
-                        hintText: 'e.g., Auckland, New Zealand',
-                        prefixIcon: const Icon(Icons.location_on),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
+                    Autocomplete<String>(
+                      textEditingController: _weatherLocationController,
+                      focusNode: _weatherLocationFocusNode,
+                      optionsBuilder: (value) =>
+                          _weatherLocationOptions(value.text),
+                      onSelected: (selection) {
+                        _weatherLocationController.text = selection;
+                        _weatherLocationFocusNode.unfocus();
+                      },
+                      fieldViewBuilder:
+                          (context, controller, focusNode, onFieldSubmitted) {
+                            return TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              onSubmitted: (_) => onFieldSubmitted(),
+                              decoration: InputDecoration(
+                                labelText: 'Weather Location (optional)',
+                                hintText: 'Start typing a city, e.g. Auckland',
+                                prefixIcon: const Icon(Icons.location_on),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                              ),
+                            );
+                          },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxHeight: 240,
+                                maxWidth: 400,
+                              ),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, index) {
+                                  final option = options.elementAt(index);
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(
+                                      Icons.location_city,
+                                      size: 20,
+                                    ),
+                                    title: Text(option),
+                                    onTap: () => onSelected(option),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
