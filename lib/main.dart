@@ -398,6 +398,8 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _selectedDay = today;
       _focusedDay = today;
+      // Collapse the sliding events panel (sidebar) for a clean today view.
+      _isEventsPanelVisible = false;
     });
 
     _fetchEventsFromFirestore(today);
