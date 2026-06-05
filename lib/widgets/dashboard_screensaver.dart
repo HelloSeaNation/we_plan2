@@ -382,39 +382,75 @@ class _DashboardScreensaverState extends State<DashboardScreensaver> {
     return Colors.amber; // Default
   }
 
-  /// Get weather-themed background image URL based on weather code
+  // Curated, content-verified weather background image pools (Unsplash).
+  // Each weather type has several options; one is picked at random per
+  // refresh so the same condition isn't always shown with the same photo.
+  static const String _imgQuery = '?w=1920&q=80';
+
+  static const List<String> _sunnyImages = [
+    'https://images.unsplash.com/photo-1601297183305-6df142704ea2', // sun & clouds
+    'https://images.unsplash.com/photo-1622278647429-71bc97e904e8', // sun in clear sky
+    'https://images.unsplash.com/photo-1502082553048-f009c37129b9', // tree, sunny day
+  ];
+  static const List<String> _partlyCloudyImages = [
+    'https://images.unsplash.com/photo-1601134467661-3d775b999c8b', // puffy clouds over lake
+    'https://images.unsplash.com/photo-1504608524841-42fe6f032b4b', // dramatic sunset clouds
+    'https://images.unsplash.com/photo-1505533321630-975218a5f66f', // soft clouds
+  ];
+  static const List<String> _cloudyImages = [
+    'https://images.unsplash.com/photo-1534088568595-a066f410bcda', // dark storm clouds
+    'https://images.unsplash.com/photo-1500740516770-92bd004b996e', // heavy storm clouds
+    'https://images.unsplash.com/photo-1505533321630-975218a5f66f', // overcast sky
+  ];
+  static const List<String> _rainImages = [
+    'https://images.unsplash.com/photo-1519692933481-e162a57d6721', // umbrella in rainy city
+    'https://images.unsplash.com/photo-1428592953211-077101b2021b', // rain on water
+    'https://images.unsplash.com/photo-1438449805896-28a666819a20', // rain splashing
+    'https://images.unsplash.com/photo-1493314894560-5c412a56c17c', // rain on window
+  ];
+  static const List<String> _snowImages = [
+    'https://images.unsplash.com/photo-1478265409131-1f65c88f965c', // frost crystals
+    'https://images.unsplash.com/photo-1491002052546-bf38f186af56', // snowy forest
+    'https://images.unsplash.com/photo-1517299321609-52687d1bc55a', // snow-covered cabin
+    'https://images.unsplash.com/photo-1418985991508-e47386d96a71', // snowy mountains
+    'https://images.unsplash.com/photo-1551582045-6ec9c11d8697', // snowy street at night
+  ];
+  static const List<String> _fogImages = [
+    'https://images.unsplash.com/photo-1543968996-ee822b8176ba', // foggy forest
+    'https://images.unsplash.com/photo-1485236715568-ddc5ee6ca227', // foggy road
+  ];
+  static const List<String> _defaultSkyImages = [
+    'https://images.unsplash.com/photo-1517483000871-1dbf64a6e1c6', // soft blue clouds
+    'https://images.unsplash.com/photo-1601134467661-3d775b999c8b', // clouds over lake
+    'https://images.unsplash.com/photo-1622278647429-71bc97e904e8', // clear blue sky
+  ];
+
+  /// Get a weather-themed background image URL based on weather code,
+  /// chosen at random from the matching pool for variety.
   String? _getWeatherBackgroundUrl(String code) {
     final weatherCode = int.tryParse(code) ?? 0;
 
-    // Free high-quality weather background images from Unsplash
+    List<String> pool;
     if (weatherCode == 113) {
-      // Sunny - bright blue sky
-      return 'https://images.unsplash.com/photo-1601297183305-6df142704ea2?w=1920&q=80';
-    }
-    if (weatherCode == 116) {
-      // Partly cloudy
-      return 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=1920&q=80';
-    }
-    if (weatherCode == 119 || weatherCode == 122) {
-      // Cloudy/Overcast
-      return 'https://images.unsplash.com/photo-1534088568595-a066f410bcda?w=1920&q=80';
-    }
-    if ((weatherCode >= 176 && weatherCode <= 356) ||
+      pool = _sunnyImages; // Sunny / clear
+    } else if (weatherCode == 116) {
+      pool = _partlyCloudyImages; // Partly cloudy
+    } else if (weatherCode == 119 || weatherCode == 122) {
+      pool = _cloudyImages; // Cloudy / Overcast
+    } else if ((weatherCode >= 176 && weatherCode <= 356) ||
         (weatherCode >= 359 && weatherCode <= 395)) {
-      // Rain/Thunderstorm
-      return 'https://images.unsplash.com/photo-1519692933481-e162a57d6721?w=1920&q=80';
-    }
-    if ((weatherCode >= 600 && weatherCode <= 622) ||
+      pool = _rainImages; // Rain / Thunderstorm
+    } else if ((weatherCode >= 600 && weatherCode <= 622) ||
         (weatherCode >= 371 && weatherCode <= 392)) {
-      // Snow
-      return 'https://images.unsplash.com/photo-1478265409131-1f65c88f965c?w=1920&q=80';
+      pool = _snowImages; // Snow
+    } else if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) {
+      pool = _fogImages; // Fog / Mist
+    } else {
+      pool = _defaultSkyImages; // Default sky
     }
-    if (weatherCode == 143 || weatherCode == 248 || weatherCode == 260) {
-      // Fog/Mist
-      return 'https://images.unsplash.com/photo-1487621167193-286a54d2d73f?w=1920&q=80';
-    }
-    // Default - nice sky
-    return 'https://images.unsplash.com/photo-1517483000871-1dbf64a6e1c6?w=1920&q=80';
+
+    if (pool.isEmpty) return null;
+    return '${pool[_random.nextInt(pool.length)]}$_imgQuery';
   }
 
   void _startQuoteRotation() {
