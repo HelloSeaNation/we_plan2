@@ -1511,7 +1511,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Autocomplete<String>(
+                    RawAutocomplete<String>(
                       textEditingController: _weatherLocationController,
                       focusNode: _weatherLocationFocusNode,
                       optionsBuilder: (value) =>
