@@ -2906,6 +2906,11 @@ class _MyHomePageState extends State<MyHomePage> {
             calendarFormat: _calendarFormat,
             startingDayOfWeek: StartingDayOfWeek.monday,
             sixWeekMonthsEnforced: false, // Show 5 rows when possible
+            // Jump directly to the target page instead of animating through
+            // every month. Without this, programmatically resetting to today
+            // (e.g. when the screensaver activates) could land on a wrong,
+            // far-off month because the page animation gets interrupted.
+            pageJumpingEnabled: true,
             // Calendar styling
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
