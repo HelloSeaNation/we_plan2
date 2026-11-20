@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# App Check debug token for local testing (a secret): never commit
+app_check_debug.json

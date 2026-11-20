@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'device_fingerprint.dart';
 import 'main.dart';
 import 'platform/platform.dart';
+import 'services/app_check_service.dart';
 import 'utils/share_code.dart';
 
 class FirestoreService {
@@ -37,6 +38,7 @@ class FirestoreService {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      await AppCheckService.activate();
 
       // A new calendar gets a random code: it is the only key to the
       // calendar, so it must not be guessable (a timestamp is).

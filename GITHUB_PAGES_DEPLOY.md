@@ -306,3 +306,39 @@ gh-pages
 
 
 
+
+---
+
+## App Check
+
+Firestore only answers requests that carry a Firebase App Check token once
+enforcement is on (Firebase console > App Check > APIs > Cloud Firestore; the
+switch covers the whole project, the WePlan phone app too). The web build gets
+its tokens from reCAPTCHA Enterprise (`lib/services/app_check_service.dart`).
+
+- **Site key:** "WePlan Pi (web)" in Google Cloud console > Security >
+  reCAPTCHA, project `shutterduo-ec088`. It only works on
+  `helloseanation.github.io`; `localhost` is deliberately not on it, so a copy
+  of the app run elsewhere gets no token. If the site moves to another domain,
+  add that domain to the key first, or the Pi stops loading.
+- **Firebase app:** the web build must use the registered web app "ann"
+  (`lib/firebase_options.dart`, `web`). It is registered under App Check >
+  Apps with the same site key, token time-to-live 1 hour, app risk 0.5.
+- **Cost:** about one reCAPTCHA assessment an hour per open display; the first
+  10,000 a month are free.
+- **If the Pi shows no events** with enforcement on, open the browser console
+  and look for an App Check error. A kiosk browser nobody touches can score as
+  a bot: lower "App risk" for "ann" in App Check > Apps.
+
+### Testing on your computer
+
+`localhost` is not on the reCAPTCHA key, so use a debug token instead:
+
+1. Firebase console > App Check > Apps > ann > Manage debug tokens > Add debug
+   token. Copy it.
+2. Save it in `app_check_debug.json` in the repo root (gitignored, never commit
+   it): `{"APP_CHECK_DEBUG_TOKEN": "<token>"}`
+3. `flutter run -d chrome --dart-define-from-file=app_check_debug.json`
+
+The GitHub Actions build never passes that file, so the published site has no
+debug token.

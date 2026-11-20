@@ -46,14 +46,18 @@ class DefaultFirebaseOptions {
     }
   }
 
+  // The project's registered web app ("ann"). App Check only gives tokens to
+  // an app that is registered, so these must be its real values
+  // (`firebase apps:sdkconfig WEB <appId>`), not the Android app's.
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyAY_2mfKV9M8xgMMBJ3Y8pQPS37AOOJmRE',
-    appId: '1:1013851184422:web:c0038858f774ab9787f5e7',
+    apiKey: 'AIzaSyAxNXHmCFVlg98lvXFpJ8wiHavvV1B76m0',
+    appId: '1:1013851184422:web:f272132176c7a5ef87f5e7',
     messagingSenderId: '1013851184422',
     projectId: 'shutterduo-ec088',
     authDomain: 'shutterduo-ec088.firebaseapp.com',
     databaseURL: 'https://shutterduo-ec088-default-rtdb.firebaseio.com',
     storageBucket: 'shutterduo-ec088.appspot.com',
+    measurementId: 'G-FE8TNNVCKG',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
