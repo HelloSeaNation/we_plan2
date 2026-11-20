@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'device_fingerprint.dart';
 import 'main.dart';
 import 'platform/platform.dart';
+import 'utils/share_code.dart';
 
 class FirestoreService {
   static FirebaseFirestore? _instance;
@@ -37,9 +38,9 @@ class FirestoreService {
         options: DefaultFirebaseOptions.currentPlatform,
       );
 
-      _sharedCollectionId = shareCode != null
-          ? 'shared_$shareCode'
-          : 'shared_${DateTime.now().millisecondsSinceEpoch}';
+      // A new calendar gets a random code: it is the only key to the
+      // calendar, so it must not be guessable (a timestamp is).
+      _sharedCollectionId = 'shared_${shareCode ?? ShareCode.generate()}';
 
       print(
         "FirestoreService initialized with collection: $_sharedCollectionId",
